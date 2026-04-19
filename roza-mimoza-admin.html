@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Роза-Мимоза — Административен панел</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<script src="supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --rose: #C8748A;
+    --rose-light: #E8B4C0;
+    --rose-pale: #F9EEF1;
+    --peach-light: #FDDEC8;
+    --cream: #FDF6EE;
+    --sage: #A8B89A;
+    --sage-light: #D6E5CE;
+    --gold: #C9A96E;
+    --text-dark: #3D2B2B;
+    --text-mid: #7A5C5C;
+    --text-light: #B08080;
+    --white: #FFFFFF;
+    --shadow: rgba(120,60,80,0.10);
+    --danger: #D85A30;
+    --danger-light: #FAECEA;
+    --success: #3a8f5a;
+    --success-light: #e6f4ec;
+    --warn: #B8860B;
+    --warn-light: #FFF8E1;
+    --sidebar-w: 220px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Lato',sans-serif; background:var(--cream); color:var(--text-dark); min-height:100vh; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--text-dark);
+    display: flex; flex-direction:column;
+    position: fixed; top:0; left:0; bottom:0;
+    z-index: 50;
+    overflow-y: auto;
+  }
+  .sidebar-logo {
+    padding: 22px 20px 18px;
+    border-bottom: 1px solid rgba(232,180,192,0.15);
+  }
+  .sidebar-logo h2 {
+    font-family:'Playfair Display',serif;
+    font-size:16px; color:var(--rose-light);
+    line-height:1.3;
+  }
+  .sidebar-logo p { font-size:10px; color:var(--text-light); margin-top:3px; letter-spacing:0.05em; }
+
+  .sidebar-nav { flex:1; padding:12px 0; }
+  .nav-group-label {
+    font-size:10px; font-weight:700; letter-spacing:0.1em;
+    color:var(--text-light); padding:14px 20px 6px;
+    text-transform:uppercase;
+  }
+  .nav-item {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 20px;
+    color:var(--text-light);
+    cursor:pointer;
+    font-size:13px; font-weight:700;
+    border-left:3px solid transparent;
+    transition:all 0.15s;
+  }
+  .nav-item:hover { color:var(--rose-light); background:rgba(200,116,138,0.08); }
+  .nav-item.active { color:var(--rose-light); border-left-color:var(--rose); background:rgba(200,116,138,0.12); }
+  .nav-item .icon { font-size:15px; width:20px; text-align:center; }
+
+  .sidebar-footer {
+    padding:16px 20px;
+    border-top:1px solid rgba(232,180,192,0.15);
+  }
+  .sidebar-footer a {
+    font-size:12px; color:var(--rose-light); text-decoration:none;
+    display:flex; align-items:center; gap:8px;
+  }
+
+  /* MAIN */
+  .main {
+    margin-left: var(--sidebar-w);
+    display:flex; flex-direction:column;
+    min-height:100vh;
+    width: calc(100% - var(--sidebar-w));
+    box-sizing: border-box;
+  }
+
+  .topbar {
+    background:var(--white);
+    border-bottom:1px solid var(--rose-light);
+    padding:14px 30px;
+    display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:40;
+    width:100%;
+    box-sizing:border-box;
+  }
+  .topbar h1 { font-family:'Playfair Display',serif; font-size:20px; color:var(--text-dark); font-weight:600; }
+  .topbar-right { display:flex; align-items:center; gap:12px; }
+  .topbar-date { font-size:12px; color:var(--text-light); }
+
+  .content { padding:28px 30px; flex:1; max-width:1200px; width:100%; box-sizing:border-box; }
+
+  /* CARDS */
+  .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:28px; }
+  .stat-card {
+    background:var(--white);
+    border:1px solid var(--rose-light);
+    border-radius:14px;
+    padding:18px 20px;
+  }
+  .stat-card .label { font-size:11px; font-weight:700; color:var(--text-light); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:6px; }
+  .stat-card .value { font-size:26px; font-weight:700; font-family:'Playfair Display',serif; color:var(--text-dark); }
+  .stat-card .sub { font-size:12px; color:var(--text-light); margin-top:4px; }
+  .stat-card.warn-card { border-color:#F2A07B; background:var(--warn-light); }
+  .stat-card.warn-card .value { color:var(--warn); }
+
+  /* SECTION HEADER */
+  .sec-header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:16px;
+  }
+  .sec-header h2 { font-family:'Playfair Display',serif; font-size:18px; font-weight:600; }
+  .btn {
+    border:none; border-radius:20px; padding:8px 18px;
+    font-size:13px; font-weight:700; cursor:pointer;
+    font-family:'Lato',sans-serif; transition:all 0.15s;
+  }
+  .btn-primary { background:var(--rose); color:#fff; }
+  .btn-primary:hover { background:var(--text-mid); }
+  .btn-sm { padding:5px 14px; font-size:12px; border-radius:16px; }
+  .btn-outline { background:none; border:1px solid var(--rose-light); color:var(--rose); }
+  .btn-outline:hover { background:var(--rose-pale); }
+  .btn-danger { background:none; border:1px solid #F2A07B; color:var(--danger); }
+  .btn-danger:hover { background:var(--danger-light); }
+  .btn-success { background:var(--success); color:#fff; }
+  .btn-success:hover { opacity:0.85; }
+
+  /* TABLE */
+  .table-wrap {
+    background:var(--white);
+    border:1px solid var(--rose-light);
+    border-radius:14px;
+    overflow:hidden;
+    margin-bottom:28px;
+  }
+  table { width:100%; border-collapse:collapse; }
+  thead tr { background:var(--rose-pale); }
+  th {
+    padding:11px 14px; font-size:11px; font-weight:700;
+    color:var(--text-mid); letter-spacing:0.06em; text-align:left;
+    text-transform:uppercase; border-bottom:1px solid var(--rose-light);
+  }
+  td { padding:11px 14px; font-size:13px; border-bottom:1px solid var(--rose-pale); vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:var(--rose-pale); }
+
+  .badge {
+    display:inline-block; font-size:11px; font-weight:700;
+    padding:3px 10px; border-radius:12px;
+  }
+  .badge-new { background:var(--rose-pale); color:var(--rose); border:1px solid var(--rose-light); }
+  .badge-ok { background:var(--success-light); color:var(--success); }
+  .badge-warn { background:var(--warn-light); color:var(--warn); }
+  .badge-out { background:var(--danger-light); color:var(--danger); }
+  .badge-pending { background:#FFF8DC; color:#8B6914; }
+  .badge-sent { background:var(--sage-light); color:#3B5E2A; }
+  .badge-done { background:var(--success-light); color:var(--success); }
+
+  /* STOCK BAR */
+  .stock-bar-wrap { display:flex; align-items:center; gap:10px; min-width:120px; }
+  .stock-bar-bg { flex:1; height:6px; background:var(--rose-pale); border-radius:3px; overflow:hidden; }
+  .stock-bar-fill { height:100%; border-radius:3px; transition:width 0.3s; }
+  .stock-num { font-size:12px; font-weight:700; min-width:28px; text-align:right; }
+
+  /* MODAL */
+  .modal-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(60,20,30,0.45); z-index:200;
+    align-items:center; justify-content:center;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background:var(--white); border-radius:18px;
+    padding:30px; width:90%; max-width:480px;
+    box-shadow:0 12px 48px rgba(100,40,60,0.2);
+    max-height:90vh; overflow-y:auto;
+  }
+  .modal h3 { font-family:'Playfair Display',serif; font-size:20px; margin-bottom:18px; color:var(--text-dark); }
+  .form-group { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+  .form-group label { font-size:12px; font-weight:700; color:var(--text-mid); }
+  .form-group input, .form-group select, .form-group textarea {
+    border:1px solid var(--rose-light); background:var(--rose-pale);
+    border-radius:10px; padding:10px 13px; font-size:13px;
+    font-family:'Lato',sans-serif; color:var(--text-dark); outline:none;
+    transition:border-color 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus { border-color:var(--rose); }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .modal-actions { display:flex; gap:10px; margin-top:18px; }
+
+  /* TABS */
+  .tabs { display:flex; gap:0; border-bottom:1px solid var(--rose-light); margin-bottom:24px; }
+  .tab {
+    padding:10px 22px; font-size:13px; font-weight:700;
+    color:var(--text-light); cursor:pointer; border-bottom:3px solid transparent;
+    transition:all 0.15s; font-family:'Lato',sans-serif;
+  }
+  .tab.active { color:var(--rose); border-bottom-color:var(--rose); }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+
+  /* ALERT */
+  .alert {
+    border-radius:10px; padding:12px 16px; font-size:13px;
+    margin-bottom:16px; display:flex; align-items:center; gap:10px;
+  }
+  .alert-warn { background:var(--warn-light); color:var(--warn); border:1px solid #F2C94C; }
+  .alert-ok { background:var(--success-light); color:var(--success); border:1px solid #A8D5B5; }
+
+  /* QTY ADJUST */
+  .qty-adj { display:flex; align-items:center; gap:6px; }
+  .qty-adj button {
+    width:24px; height:24px; border-radius:50%;
+    border:1px solid var(--rose-light); background:var(--rose-pale);
+    cursor:pointer; font-size:15px; color:var(--rose);
+    display:flex; align-items:center; justify-content:center;
+    transition:background 0.15s;
+  }
+  .qty-adj button:hover { background:var(--rose-light); }
+  .qty-adj .num {
+    font-size:13px; font-weight:700; min-width:32px; text-align:center;
+    border:1px solid var(--rose-light); border-radius:6px;
+    padding:2px 6px; background:var(--white);
+  }
+
+  /* SEARCH */
+  .search-row { display:flex; gap:10px; margin-bottom:14px; align-items:center; flex-wrap:wrap; }
+  .search-input {
+    border:1px solid var(--rose-light); background:var(--white);
+    border-radius:20px; padding:8px 16px; font-size:13px;
+    font-family:'Lato',sans-serif; outline:none; width:220px;
+    color:var(--text-dark);
+  }
+  .filter-select {
+    border:1px solid var(--rose-light); background:var(--white);
+    border-radius:20px; padding:7px 14px; font-size:13px;
+    font-family:'Lato',sans-serif; outline:none; color:var(--text-mid);
+  }
+
+  /* HISTORY LOG */
+  .log-item {
+    display:flex; gap:12px; align-items:flex-start;
+    padding:10px 0; border-bottom:1px solid var(--rose-pale);
+  }
+  .log-item:last-child { border-bottom:none; }
+  .log-dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+  .log-in { background:var(--success); }
+  .log-out { background:var(--rose); }
+  .log-adj { background:var(--gold); }
+  .log-text { font-size:13px; color:var(--text-dark); line-height:1.5; }
+  .log-time { font-size:11px; color:var(--text-light); margin-top:2px; }
+
+  @media(max-width:700px) {
+    .sidebar { width:60px; }
+    .sidebar-logo, .nav-group-label, .nav-item span { display:none; }
+    .nav-item { justify-content:center; padding:14px; }
+    .main { margin-left:60px; }
+    .content { padding:16px; }
+    .topbar { padding:12px 16px; }
+    .form-row { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="position:fixed;inset:0;background:linear-gradient(135deg,#F9EEF1,#FDF6EE,#F2DDC8);display:flex;align-items:center;justify-content:center;z-index:9999;">
+  <div style="background:#fff;border-radius:24px;padding:44px 40px;max-width:380px;width:90%;box-shadow:0 8px 40px rgba(120,60,80,0.15);text-align:center;">
+    <div style="font-size:52px;margin-bottom:10px;">🌹</div>
+    <h1 style="font-family:'Playfair Display',serif;font-size:22px;color:#3D2B2B;margin-bottom:4px;">Роза-Мимоза</h1>
+    <p style="font-size:12px;color:#B08080;letter-spacing:0.08em;margin-bottom:28px;">АДМИНИСТРАТИВЕН ПАНЕЛ</p>
+
+    <div style="margin-bottom:14px;text-align:left;">
+      <label style="font-size:11px;font-weight:700;color:#7A5C5C;letter-spacing:0.06em;display:block;margin-bottom:5px;">ПАРОЛА</label>
+      <input type="password" id="login-password"
+        placeholder="Въведете паролата..."
+        style="width:100%;border:1px solid #E8B4C0;background:#F9EEF1;border-radius:10px;padding:12px 14px;font-size:14px;font-family:'Lato',sans-serif;color:#3D2B2B;outline:none;"
+        onkeydown="if(event.key==='Enter') checkLogin()">
+    </div>
+
+    <div id="login-error" style="display:none;background:#FAECEA;border-radius:8px;padding:9px 14px;font-size:12px;color:#D85A30;margin-bottom:12px;">
+      ❌ Грешна парола. Опитайте отново.
+    </div>
+
+    <button onclick="checkLogin()"
+      style="width:100%;background:#C8748A;color:#fff;border:none;border-radius:24px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;letter-spacing:0.04em;transition:background 0.2s;"
+      onmouseover="this.style.background='#7A5C5C'" onmouseout="this.style.background='#C8748A'">
+      Вход →
+    </button>
+
+    <p style="font-size:11px;color:#B08080;margin-top:18px;line-height:1.6;">
+      🔒 Защитена зона — само за администратор
+    </p>
+  </div>
+</div>
+
+<!-- CONFIG WARNING -->
+<div id="config-warning" style="display:none;position:fixed;top:0;left:0;right:0;z-index:500;background:#FFF8E1;border-bottom:2px solid #C9A96E;padding:12px 24px;font-size:13px;color:#8B6914;font-family:'Lato',sans-serif;align-items:center;gap:12px;">
+  ⚠️ <strong>Supabase не е конфигуриран</strong> — отвори <strong>supabase-config.js</strong> с Notepad, попълни URL и KEY, запази и качи отново в Netlify.
+</div>
+
+<!-- LOADING BAR -->
+<div id="loading-bar" style="display:none;position:fixed;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--rose),var(--gold));z-index:600;animation:loading 1s infinite;"></div>
+<style>@keyframes loading { 0%{opacity:1} 50%{opacity:0.4} 100%{opacity:1} }</style>
+
+<!-- MAIN ADMIN (скрит до успешен вход) -->
+<div id="admin-content" style="display:none;"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <h2>🌹 Роза-Мимоза</h2>
+    <p>АДМИНИСТРАТИВЕН ПАНЕЛ</p>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-group-label">Основно</div>
+    <div class="nav-item active" onclick="showTab('dashboard',this)">
+      <span class="icon">📊</span><span>Табло</span>
+    </div>
+    <div class="nav-item" onclick="showTab('orders',this)">
+      <span class="icon">📦</span><span>Поръчки</span>
+      <span id="orders-badge" style="margin-left:auto;background:var(--rose);color:#fff;font-size:10px;border-radius:10px;padding:1px 7px;">3</span>
+    </div>
+    <div class="nav-group-label">Каталог</div>
+    <div class="nav-item" onclick="showTab('products',this)">
+      <span class="icon">🌸</span><span>Продукти</span>
+    </div>
+    <div class="nav-item" onclick="showTab('stock',this)">
+      <span class="icon">🗃️</span><span>Склад</span>
+    </div>
+    <div class="nav-group-label">Друго</div>
+    <div class="nav-item" onclick="showTab('special',this)">
+      <span class="icon">✨</span><span>Специални</span>
+    </div>
+    <div class="nav-item" onclick="showTab('settings',this)">
+      <span class="icon">⚙️</span><span>Настройки</span>
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <a href="index.html" target="_blank">🌐 Към магазина</a>
+    <a href="#" onclick="logout()" style="margin-top:10px;color:#B08080;">🔓 Изход</a>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <h1 id="page-title">Табло</h1>
+    <div class="topbar-right">
+      <span class="topbar-date" id="today-date"></span>
+      <span style="font-size:18px;">👤</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══ DASHBOARD ═══ -->
+    <div id="tab-dashboard" class="tab-panel active">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="label">Поръчки днес</div>
+          <div class="value" id="d-today">0</div>
+          <div class="sub">Нови поръчки</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Поръчки общо</div>
+          <div class="value" id="d-total">0</div>
+          <div class="sub">Всички поръчки</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Продукти</div>
+          <div class="value" id="d-products">0</div>
+          <div class="sub">В каталога</div>
+        </div>
+        <div class="stat-card warn-card" id="d-low-card">
+          <div class="label">⚠️ Ниска наличност</div>
+          <div class="value" id="d-low">0</div>
+          <div class="sub">Продукта под минимум</div>
+        </div>
+      </div>
+
+      <div id="low-stock-alert"></div>
+
+      <div class="sec-header"><h2>Последни поръчки</h2><button class="btn btn-outline btn-sm" onclick="showTab('orders',null)">Всички →</button></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Клиент</th><th>Сума</th><th>Статус</th><th>Дата</th></tr></thead>
+          <tbody id="dash-orders"></tbody>
+        </table>
+      </div>
+
+      <div class="sec-header"><h2>Ниски наличности</h2><button class="btn btn-outline btn-sm" onclick="showTab('stock',null)">Склад →</button></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Продукт</th><th>Категория</th><th>Наличност</th><th>Минимум</th><th>Действие</th></tr></thead>
+          <tbody id="dash-low-stock"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ ORDERS ═══ -->
+    <div id="tab-orders" class="tab-panel">
+      <div class="search-row">
+        <input class="search-input" placeholder="🔍 Търсене по клиент..." oninput="filterOrders(this.value)">
+        <select class="filter-select" onchange="filterOrderStatus(this.value)">
+          <option value="">Всички статуси</option>
+          <option value="pending">Нова</option>
+          <option value="sent">Изпратена</option>
+          <option value="done">Завършена</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="openOrderModal()">+ Ръчна поръчка</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Клиент</th><th>Телефон</th><th>Град / Еконт</th><th>Продукти</th><th>Сума</th><th>Статус</th><th>Дата</th><th></th></tr></thead>
+          <tbody id="orders-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ PRODUCTS ═══ -->
+    <div id="tab-products" class="tab-panel">
+      <div class="search-row">
+        <input class="search-input" placeholder="🔍 Търсене..." oninput="filterProducts(this.value)">
+        <select class="filter-select" onchange="filterProductCat(this.value)">
+          <option value="">Всички категории</option>
+          <option value="rozi">Рози</option>
+          <option value="gardenii">Гардении</option>
+          <option value="koleda">Коледни звезди</option>
+          <option value="bozuri">Божури</option>
+          <option value="pelargoniu">Пеларгониуми</option>
+          <option value="lilii">Лилии</option>
+          <option value="malki">Малки цветя</option>
+          <option value="kolektsii">Колекции</option>
+          <option value="spetsialni">Специални</option>
+          <option value="lista">Листа</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="openProductModal()">+ Нов продукт</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Продукт</th><th>Категория</th><th>Тип цена</th><th>Цени</th><th>Цветове</th><th>Наличност</th><th>Статус</th><th></th></tr></thead>
+          <tbody id="products-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ STOCK ═══ -->
+    <div id="tab-stock" class="tab-panel">
+      <div class="tabs">
+        <div class="tab active" onclick="showStockTab('stock-list',this)">Наличности</div>
+        <div class="tab" onclick="showStockTab('stock-history',this)">История на движенията</div>
+        <div class="tab" onclick="showStockTab('stock-report',this)">Справка</div>
+      </div>
+
+      <div id="stock-list" class="tab-panel active">
+        <div class="search-row">
+          <input class="search-input" placeholder="🔍 Търсене..." oninput="filterStock(this.value)">
+          <select class="filter-select" onchange="filterStockCat(this.value)">
+            <option value="">Всички категории</option>
+            <option value="rozi">Рози</option>
+            <option value="gardenii">Гардении</option>
+            <option value="koleda">Коледни звезди</option>
+            <option value="bozuri">Божури</option>
+            <option value="pelargoniu">Пеларгониуми</option>
+            <option value="lilii">Лилии</option>
+            <option value="malki">Малки цветя</option>
+            <option value="kolektsii">Колекции</option>
+            <option value="spetsialni">Специални</option>
+            <option value="lista">Листа</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Продукт</th><th>Категория</th><th>Размер</th><th>Наличност</th><th>Мин. праг</th><th>Корекция</th><th>Бележка</th></tr></thead>
+            <tbody id="stock-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="stock-history" class="tab-panel">
+        <div class="table-wrap" style="padding:16px 20px;">
+          <div id="stock-log"></div>
+        </div>
+      </div>
+
+      <div id="stock-report" class="tab-panel">
+        <div class="stat-grid" style="margin-bottom:20px;">
+          <div class="stat-card"><div class="label">Общо продукти</div><div class="value" id="rep-total">—</div><div class="sub">в склада</div></div>
+          <div class="stat-card warn-card"><div class="label">Ниска наличност</div><div class="value" id="rep-low">—</div><div class="sub">под минимума</div></div>
+          <div class="stat-card"><div class="label">Налични бройки</div><div class="value" id="rep-qty">—</div><div class="sub">общо в склада</div></div>
+          <div class="stat-card"><div class="label">Движения днес</div><div class="value" id="rep-moves">—</div><div class="sub">вход/изход</div></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Категория</th><th>Продукти</th><th>Общо бройки</th><th>Статус</th></tr></thead>
+            <tbody id="report-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SPECIAL ORDERS ═══ -->
+    <div id="tab-special" class="tab-panel">
+      <div class="alert alert-ok">✨ Запитванията за специални поръчки от сайта се показват тук. Клиентите изпращат форма и вие отговаряте директно по имейл.</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Клиент</th><th>Имейл</th><th>Телефон</th><th>Категория</th><th>Описание</th><th>Дата</th><th>Статус</th></tr></thead>
+          <tbody id="special-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ SETTINGS ═══ -->
+    <div id="tab-settings" class="tab-panel">
+      <div style="max-width:540px;">
+        <div class="sec-header" style="margin-bottom:20px;"><h2>Настройки на магазина</h2></div>
+        <div class="table-wrap" style="padding:24px;">
+          <div class="form-group"><label>Имейл за контакт</label><input value="mariana99jordan@gmail.com"></div>
+          <div class="form-group"><label>Facebook страница</label><input value="https://www.facebook.com/share/1GTHzsR8YT/"></div>
+          <div class="form-group"><label>Минимален праг за предупреждение (бр.)</label><input type="number" value="5" min="1"></div>
+          <div class="form-group"><label>Безплатна доставка над (€)</label><input type="number" value="15" min="0" step="0.5"></div>
+          <div class="form-group"><label>Съобщение в горната лента</label><input value="🌸 Безплатна доставка при поръчка над 15 евро | Доставка с Еконт | Наложен платеж"></div>
+          <button class="btn btn-primary" style="margin-top:8px;" onclick="alert('Настройките са запазени! ✅')">Запази промените</button>
+        </div>
+
+        <div class="sec-header" style="margin:28px 0 16px;"><h2>🔗 Supabase връзка</h2></div>
+        <div class="table-wrap" style="padding:24px;">
+          <div id="sb-status-box" style="border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:14px;font-weight:700;"></div>
+          <p style="font-size:13px;color:var(--text-mid);margin-bottom:14px;">Ключовете се задават в файла <strong>supabase-config.js</strong>:</p>
+          <div style="background:#2C2C2A;border-radius:10px;padding:16px 18px;margin-bottom:14px;">
+            <div style="font-size:12px;color:#A8D5B5;font-family:monospace;line-height:2;">
+              <div style="color:#B08080;">// supabase-config.js</div>
+              <div><span style="color:#F0997B;">const</span> SUPABASE_URL = <span style="color:#A8D5B5;">'https://xxxxx.supabase.co'</span>;</div>
+              <div><span style="color:#F0997B;">const</span> SUPABASE_KEY = <span style="color:#A8D5B5;">'eyJhbGci...'</span>;</div>
+            </div>
+          </div>
+          <ol style="font-size:13px;color:var(--text-mid);padding-left:20px;line-height:2;">
+            <li>Отвори <strong>supabase-config.js</strong> с Notepad</li>
+            <li>Замени <strong>POSTAVI_TUK_URL</strong> с Project URL от Supabase → Settings → API</li>
+            <li>Замени <strong>POSTAVI_TUK_KEY</strong> с anon public key</li>
+            <li>Запази файла (Ctrl+S)</li>
+            <li>Качи цялата папка отново в Netlify</li>
+          </ol>
+          <button class="btn btn-outline" style="margin-top:12px;" onclick="testSupabaseConnection()">🔌 Тествай връзката</button>
+        </div>
+
+
+        <div class="table-wrap" style="padding:24px;">
+          <div class="form-group">
+            <label>Текуща парола</label>
+            <input type="password" id="pw-current" placeholder="Въведи текущата парола">
+          </div>
+          <div class="form-group">
+            <label>Нова парола</label>
+            <input type="password" id="pw-new" placeholder="Въведи нова парола (мин. 6 символа)">
+          </div>
+          <div class="form-group">
+            <label>Потвърди нова парола</label>
+            <input type="password" id="pw-confirm" placeholder="Повтори новата парола">
+          </div>
+          <div id="pw-msg" style="display:none;border-radius:8px;padding:9px 14px;font-size:13px;margin-bottom:10px;"></div>
+          <button class="btn btn-primary" onclick="changePassword()">🔒 Смени паролата</button>
+          <p style="font-size:11px;color:var(--text-light);margin-top:10px;line-height:1.6;">
+            Паролата се запазва в браузъра на този компютър. При използване на друг компютър или браузър ще важи паролата по подразбиране: <strong>RozaMimoza2025</strong>
+          </p>
+        </div>
+
+        <div class="sec-header" style="margin:28px 0 16px;"><h2>Ценови таблици</h2></div>
+        <div class="table-wrap" style="padding:20px;">
+          <p style="font-size:13px;color:var(--text-mid);margin-bottom:14px;">Цени за стандартни размери (€/бр.):</p>
+          <div class="form-row">
+            <div class="form-group"><label>5 см</label><input type="number" value="0.75" step="0.05"></div>
+            <div class="form-group"><label>4 см</label><input type="number" value="0.60" step="0.05"></div>
+            <div class="form-group"><label>3 см</label><input type="number" value="0.50" step="0.05"></div>
+            <div class="form-group"><label>Пъпка</label><input type="number" value="0.40" step="0.05"></div>
+            <div class="form-group"><label>Листо</label><input type="number" value="0.30" step="0.05"></div>
+            <div class="form-group"><label>Клонче листа</label><input type="number" value="0.50" step="0.05"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="alert('Цените са запазени! ✅')">Запази цените</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- MODAL: Add/Edit Product -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal">
+    <h3 id="prod-modal-title">Нов продукт</h3>
+    <div class="form-group"><label>Име на продукта *</label><input id="pm-name" placeholder="напр. Роза класическа"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Категория *</label>
+        <select id="pm-cat">
+          <option value="rozi">Рози</option>
+          <option value="gardenii">Гардении</option>
+          <option value="koleda">Коледни звезди</option>
+          <option value="bozuri">Божури</option>
+          <option value="pelargoniu">Пеларгониуми</option>
+          <option value="lilii">Лилии</option>
+          <option value="malki">Малки цветя</option>
+          <option value="kolektsii">Колекции</option>
+          <option value="spetsialni">Специални</option>
+          <option value="lista">Листа</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Емоджи / икона</label><input id="pm-emoji" placeholder="🌹" maxlength="4"></div>
+    </div>
+    <div class="form-group"><label>Тип ценообразуване</label>
+      <select id="pm-price-type" onchange="togglePriceFields()">
+        <option value="sizes">По размер (5см / 4см / 3см / Пъпка)</option>
+        <option value="fixed">Фиксирана цена</option>
+        <option value="leaf">Листа (листо / клонче)</option>
+      </select>
+    </div>
+    <div id="pm-fixed-row" class="form-group" style="display:none;"><label>Цена (€) *</label><input id="pm-price" type="number" step="0.05" min="0" placeholder="0.00"></div>
+    <div class="form-group"><label>Налични цветове (разделени със запетая)</label><input id="pm-color" placeholder="напр. Розово, Червено, Бяло, Лилаво"></div>
+    <div class="form-group"><label>Описание на продукта</label><textarea id="pm-desc" placeholder="Ръчно изработена роза от памучен плат. Подходяща за скрапбукинг..." style="height:70px;"></textarea></div>
+    <div class="form-group"><label>Материал / техника</label><input id="pm-material" placeholder="напр. Памучен плат, ръчно оцветена"></div>
+    <div class="form-group"><label>Снимка на продукта</label>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <label style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;background:var(--rose-pale);border:1px solid var(--rose-light);border-radius:10px;padding:9px 16px;font-size:13px;font-weight:700;color:var(--rose);transition:background 0.2s;" onmouseover="this.style.background='var(--peach-light)'" onmouseout="this.style.background='var(--rose-pale)'">
+          📷 Избери снимка
+          <input type="file" id="pm-image-input" accept="image/*" style="display:none;" onchange="previewProductImage(this)">
+        </label>
+        <span id="pm-image-name" style="font-size:12px;color:var(--text-light);">Няма избрана снимка</span>
+      </div>
+      <img id="pm-image-preview" src="" alt="" style="display:none;margin-top:10px;width:120px;height:90px;object-fit:cover;border-radius:10px;border:1px solid var(--rose-light);">
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Начална наличност (бр.)</label><input id="pm-qty" type="number" min="0" value="0"></div>
+      <div class="form-group"><label>Мин. праг (бр.)</label><input id="pm-min" type="number" min="1" value="5"></div>
+    </div>
+    <div class="form-group"><label>Статус</label>
+      <select id="pm-status"><option value="active">Активен</option><option value="hidden">Скрит</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveProduct()">Запази</button>
+      <button class="btn btn-outline" onclick="closeModal('product-modal')">Отказ</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Manual Order -->
+<div class="modal-overlay" id="order-modal">
+  <div class="modal">
+    <h3>Ръчна поръчка</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Клиент *</label><input id="om-name" placeholder="Три имена"></div>
+      <div class="form-group"><label>Телефон *</label><input id="om-phone" placeholder="08xxxxxxxx"></div>
+    </div>
+    <div class="form-group"><label>Имейл</label><input id="om-email" type="email" placeholder="email@example.com"></div>
+    <div class="form-group"><label>Град и офис Еконт *</label><input id="om-city" placeholder="напр. Бургас — Еконт Меден рудник"></div>
+    <div class="form-group"><label>Продукти (описание)</label><textarea id="om-items" placeholder="напр. 3х Роза 5см червена, 2х Гардения 4см" style="height:70px;"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Сума (€)</label><input id="om-total" type="number" step="0.01" min="0" placeholder="0.00"></div>
+      <div class="form-group"><label>Статус</label>
+        <select id="om-status"><option value="pending">Нова</option><option value="sent">Изпратена</option><option value="done">Завършена</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Бележка</label><input id="om-note" placeholder="Незадължително"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveOrder()">Запази поръчка</button>
+      <button class="btn btn-outline" onclick="closeModal('order-modal')">Отказ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── SUPABASE INIT ──────────────────────────────────────
+// Ключовете идват от supabase-config.js
+let sb = null;
+try {
+  if(typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL !== 'POSTAVI_TUK_URL') {
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('✅ Supabase свързан успешно');
+  } else {
+    console.warn('⚠️ Supabase не е конфигуриран — попълни supabase-config.js');
+  }
+} catch(e) {
+  console.error('Supabase грешка:', e.message);
+}
+
+function isConfigured() {
+  return sb !== null &&
+    typeof SUPABASE_URL !== 'undefined' &&
+    SUPABASE_URL !== 'POSTAVI_TUK_URL';
+}
+
+// ── DATA (локален кеш) ─────────────────────────────────
+const CATS = {rozi:'🌹 Рози',gardenii:'🤍 Гардении',koleda:'⭐ Коледни звезди',
+  bozuri:'🌸 Божури',pelargoniu:'🌺 Пеларгониуми',lilii:'🌷 Лилии',
+  malki:'🌼 Малки цветя',kolektsii:'💐 Колекции',spetsialni:'✨ Специални',lista:'🍃 Листа'};
+
+let products = [];
+let orders = [];
+let specialOrders = [];
+let stockLog = [];
+let nextProdId = 100;
+let nextOrdId = 100;
+let editingProdId = null;
+let productFilter = '';
+let productCatFilter = '';
+let orderFilter = '';
+let orderStatusFilter = '';
+let stockFilter = '';
+let stockCatFilter = '';
+
+// ── ЗАРЕЖДАНЕ ОТ SUPABASE ─────────────────────────────
+async function loadAll() {
+  if(!isConfigured()) {
+    showConfigWarning();
+    return;
+  }
+  showLoading(true);
+  try {
+    const [pRes, oRes, sRes, lRes] = await Promise.all([
+      sb.from('products').select('*').order('id'),
+      sb.from('orders').select('*').order('created_at', {ascending: false}),
+      sb.from('special_orders').select('*').order('created_at', {ascending: false}),
+      sb.from('stock_log').select('*').order('created_at', {ascending: false}).limit(50),
+    ]);
+    if(pRes.error) throw pRes.error;
+    if(oRes.error) throw oRes.error;
+
+    products = (pRes.data || []).map(p => ({
+      id: p.id, name: p.name, cat: p.cat, emoji: p.emoji || '🌸',
+      priceType: p.price_type, price: p.price,
+      colors: p.colors || [], desc: p.description, material: p.material,
+      image: p.image_url, qty: p.qty, minQty: p.min_qty,
+      status: p.status, special: p.is_special, badge: p.badge
+    }));
+    orders = (oRes.data || []).map(o => ({
+      id: o.id, name: o.customer_name, phone: o.phone,
+      email: o.email || '', city: o.city,
+      items: Array.isArray(o.items) ? o.items.map(i => typeof i === 'object' ? i.name || JSON.stringify(i) : i).join(', ') : String(o.items),
+      total: parseFloat(o.total), status: o.status,
+      date: (o.created_at || '').split('T')[0], note: o.note || ''
+    }));
+    specialOrders = (sRes.data || []).map(s => ({
+      name: s.name, email: s.email, phone: s.phone || '',
+      cat: s.category || '', desc: s.description || '',
+      date: (s.created_at || '').split('T')[0], status: s.status === 'new' ? 'Нова' : s.status === 'in_progress' ? 'В процес' : 'Завършена'
+    }));
+    stockLog = (lRes.data || []).map(l => ({
+      type: l.type, text: l.note || l.product_name, time: formatTime(l.created_at)
+    }));
+
+    renderDashboard();
+    renderProducts();
+    renderOrders();
+    renderStock();
+    renderSpecial();
+    renderReport();
+  } catch(err) {
+    showError('Грешка при зареждане: ' + err.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+function showConfigWarning() {
+  const warn = document.getElementById('config-warning');
+  if(warn) { warn.style.display = 'flex'; warn.style.top = '0'; }
+}
+
+function showLoading(on) {
+  const el = document.getElementById('loading-bar');
+  if(el) el.style.display = on ? 'block' : 'none';
+}
+
+function showError(msg) {
+  alert('⚠️ ' + msg);
+}
+
+function formatTime(iso) {
+  if(!iso) return '';
+  const d = new Date(iso);
+  return `${d.getDate()} ${['яну','фев','мар','апр','май','юни','юли','авг','сеп','окт','ное','дек'][d.getMonth()]}, ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// ── NAVIGATION ────────────────────────────────────────
+function showTab(id, el) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('#tab-' + id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const titles = {dashboard:'Табло',orders:'Поръчки',products:'Продукти',
+    stock:'Складова отчетност',special:'Специални поръчки',settings:'Настройки'};
+  document.getElementById('page-title').textContent = titles[id] || id;
+  if(id==='dashboard') renderDashboard();
+  if(id==='orders') renderOrders();
+  if(id==='products') renderProducts();
+  if(id==='stock') renderStock();
+  if(id==='special') renderSpecial();
+  if(id==='settings') {
+    const box = document.getElementById('sb-status-box');
+    if(box) {
+      if(isConfigured()) {
+        box.style.background = 'var(--success-light)';
+        box.style.color = 'var(--success)';
+        box.textContent = '✅ Supabase е свързан — данните се записват в базата данни';
+      } else {
+        box.style.background = 'var(--warn-light)';
+        box.style.color = 'var(--warn)';
+        box.textContent = '⚠️ Supabase не е конфигуриран — попълни supabase-config.js';
+      }
+    }
+  }
+}
+
+function showStockTab(id, el) {
+  document.querySelectorAll('#tab-stock .tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('#tab-stock .tab').forEach(t => t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  if(id==='stock-report') renderReport();
+  if(id==='stock-history') renderLog();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────
+function renderDashboard() {
+  const today = new Date().toISOString().split('T')[0];
+  const todayOrders = orders.filter(o => o.date === today);
+  const lowStock = products.filter(p => p.qty <= p.minQty);
+
+  document.getElementById('d-today').textContent = todayOrders.length;
+  document.getElementById('d-total').textContent = orders.length;
+  document.getElementById('d-products').textContent = products.length;
+  document.getElementById('d-low').textContent = lowStock.length;
+
+  const alertEl = document.getElementById('low-stock-alert');
+  alertEl.innerHTML = lowStock.length
+    ? `<div class="alert alert-warn">⚠️ ${lowStock.length} продукта са под минималния праг: ${lowStock.map(p=>p.name).join(', ')}</div>`
+    : `<div class="alert alert-ok">✅ Всички наличности са в норма</div>`;
+
+  const tbody = document.getElementById('dash-orders');
+  tbody.innerHTML = orders.slice(0,5).map(o => `
+    <tr><td>#${o.id}</td><td>${o.name}</td>
+    <td><strong>${o.total.toFixed(2)} €</strong></td>
+    <td>${statusBadge(o.status)}</td><td>${o.date}</td></tr>`).join('');
+
+  const lowTbody = document.getElementById('dash-low-stock');
+  lowTbody.innerHTML = lowStock.length ? lowStock.map(p => `
+    <tr><td>${p.emoji} ${p.name}</td><td>${CATS[p.cat]}</td>
+    <td>${stockBadge(p.qty, p.minQty)}</td><td>${p.minQty} бр.</td>
+    <td><button class="btn btn-outline btn-sm" onclick="quickRestock(${p.id})">+ Зареди</button></td></tr>`).join('')
+    : '<tr><td colspan="5" style="text-align:center;color:var(--text-light);padding:20px;">Няма продукти с ниска наличност 🌸</td></tr>';
+}
+
+// ── ORDERS ────────────────────────────────────────────
+function renderOrders() {
+  let filtered = orders.filter(o => {
+    const matchText = !orderFilter || o.name.toLowerCase().includes(orderFilter.toLowerCase());
+    const matchStatus = !orderStatusFilter || o.status === orderStatusFilter;
+    return matchText && matchStatus;
+  });
+  const tbody = document.getElementById('orders-tbody');
+  tbody.innerHTML = filtered.map(o => `
+    <tr><td><strong>#${o.id}</strong></td><td>${o.name}</td><td>${o.phone}</td>
+    <td style="font-size:12px;">${o.city}</td>
+    <td style="font-size:12px;max-width:160px;">${o.items}</td>
+    <td><strong>${o.total.toFixed(2)} €</strong></td>
+    <td><select onchange="changeOrderStatus(${o.id},this.value)" style="border:1px solid var(--rose-light);border-radius:8px;padding:4px 8px;font-size:12px;font-family:'Lato',sans-serif;background:var(--white);">
+      <option value="pending" ${o.status==='pending'?'selected':''}>Нова</option>
+      <option value="sent" ${o.status==='sent'?'selected':''}>Изпратена</option>
+      <option value="done" ${o.status==='done'?'selected':''}>Завършена</option>
+    </select></td>
+    <td style="font-size:12px;">${o.date}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.id})">✕</button></td></tr>`).join('');
+}
+
+function filterOrders(v) { orderFilter = v; renderOrders(); }
+function filterOrderStatus(v) { orderStatusFilter = v; renderOrders(); }
+
+async function changeOrderStatus(id, status) {
+  const o = orders.find(x => x.id === id);
+  if(!o) return;
+  o.status = status;
+  if(isConfigured()) {
+    const { error } = await sb.from('orders').update({ status }).eq('id', id);
+    if(error) { showError('Грешка при обновяване: ' + error.message); return; }
+  }
+  renderOrders();
+}
+
+async function deleteOrder(id) {
+  if(!confirm('Изтриване на поръчка #' + id + '?')) return;
+  if(isConfigured()) {
+    const { error } = await sb.from('orders').delete().eq('id', id);
+    if(error) { showError('Грешка: ' + error.message); return; }
+  }
+  orders = orders.filter(o => o.id !== id);
+  renderOrders(); renderDashboard();
+}
+
+function openOrderModal() {
+  ['om-name','om-phone','om-email','om-city','om-items','om-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('om-total').value = '';
+  document.getElementById('om-status').value = 'pending';
+  document.getElementById('order-modal').classList.add('open');
+}
+
+async function saveOrder() {
+  const name = document.getElementById('om-name').value.trim();
+  const phone = document.getElementById('om-phone').value.trim();
+  const city = document.getElementById('om-city').value.trim();
+  if(!name || !phone || !city) { alert('Попълнете задължителните полета.'); return; }
+  const data = {
+    customer_name: name, phone, email: document.getElementById('om-email').value,
+    city, items: document.getElementById('om-items').value,
+    total: parseFloat(document.getElementById('om-total').value) || 0,
+    status: document.getElementById('om-status').value,
+    note: document.getElementById('om-note').value,
+  };
+  if(isConfigured()) {
+    const { data: inserted, error } = await sb.from('orders').insert([data]).select().single();
+    if(error) { showError('Грешка при запис: ' + error.message); return; }
+    orders.unshift({ id: inserted.id, name: inserted.customer_name, phone: inserted.phone,
+      email: inserted.email || '', city: inserted.city, items: inserted.items,
+      total: parseFloat(inserted.total), status: inserted.status,
+      date: (inserted.created_at || '').split('T')[0], note: inserted.note || '' });
+  } else {
+    orders.unshift({ id: nextOrdId++, name, phone, email: data.email, city, items: data.items,
+      total: data.total, status: data.status, date: new Date().toISOString().split('T')[0], note: data.note });
+  }
+  closeModal('order-modal');
+  renderOrders(); renderDashboard();
+}
+
+// ── PRODUCTS ──────────────────────────────────────────
+function renderProducts() {
+  let filtered = products.filter(p => {
+    const matchText = !productFilter || p.name.toLowerCase().includes(productFilter.toLowerCase());
+    const matchCat = !productCatFilter || p.cat === productCatFilter;
+    return matchText && matchCat;
+  });
+  const tbody = document.getElementById('products-tbody');
+  tbody.innerHTML = filtered.map(p => {
+    const imgThumb = p.image
+      ? `<img src="${p.image}" style="width:40px;height:40px;object-fit:cover;border-radius:8px;border:1px solid var(--rose-light);vertical-align:middle;margin-right:8px;">`
+      : `<span style="font-size:24px;margin-right:8px;">${p.emoji}</span>`;
+    const colorsHtml = p.colors && p.colors.length
+      ? p.colors.slice(0,4).map(c=>`<span style="font-size:10px;background:var(--rose-pale);border:1px solid var(--rose-light);border-radius:10px;padding:2px 7px;color:var(--text-mid);font-weight:700;">${c}</span>`).join(' ')
+      : '<span style="font-size:11px;color:var(--text-light);">—</span>';
+    const descText = p.desc ? `<div style="font-size:11px;color:var(--text-light);margin-top:2px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.desc}</div>` : '';
+    return `<tr>
+      <td><div style="display:flex;align-items:center;">${imgThumb}<div><strong>${p.name}</strong>${descText}</div></div></td>
+      <td>${CATS[p.cat]}</td><td>${priceTypeLabel(p.priceType)}</td>
+      <td style="font-size:12px;">${priceDisplay(p)}</td>
+      <td style="max-width:150px;">${colorsHtml}</td>
+      <td>${stockBadge(p.qty, p.minQty)}</td>
+      <td><span class="badge ${p.status==='active'?'badge-ok':'badge-warn'}">${p.status==='active'?'Активен':'Скрит'}</span></td>
+      <td style="display:flex;gap:6px;">
+        <button class="btn btn-outline btn-sm" onclick="editProduct(${p.id})">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">✕</button>
+      </td></tr>`;
+  }).join('');
+}
+
+function filterProducts(v) { productFilter = v; renderProducts(); }
+function filterProductCat(v) { productCatFilter = v; renderProducts(); }
+
+function openProductModal(editId) {
+  editingProdId = editId || null;
+  window._pmImageData = null;
+  document.getElementById('prod-modal-title').textContent = editId ? 'Редактиране на продукт' : 'Нов продукт';
+  if(editId) {
+    const p = products.find(x => x.id === editId);
+    document.getElementById('pm-name').value = p.name;
+    document.getElementById('pm-cat').value = p.cat;
+    document.getElementById('pm-emoji').value = p.emoji;
+    document.getElementById('pm-price-type').value = p.priceType;
+    document.getElementById('pm-price').value = p.price || '';
+    document.getElementById('pm-color').value = p.colors ? p.colors.join(', ') : '';
+    document.getElementById('pm-desc').value = p.desc || '';
+    document.getElementById('pm-material').value = p.material || '';
+    document.getElementById('pm-qty').value = p.qty;
+    document.getElementById('pm-min').value = p.minQty;
+    document.getElementById('pm-status').value = p.status;
+    document.getElementById('pm-image-name').textContent = p.image ? 'Снимка качена ✓' : 'Няма снимка';
+    const prev = document.getElementById('pm-image-preview');
+    if(p.image) { prev.src = p.image; prev.style.display = 'block'; } else { prev.style.display = 'none'; }
+  } else {
+    ['pm-name','pm-emoji','pm-price','pm-color','pm-desc','pm-material'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('pm-cat').value = 'rozi';
+    document.getElementById('pm-price-type').value = 'sizes';
+    document.getElementById('pm-qty').value = 0;
+    document.getElementById('pm-min').value = 5;
+    document.getElementById('pm-status').value = 'active';
+    document.getElementById('pm-image-name').textContent = 'Няма избрана снимка';
+    document.getElementById('pm-image-preview').style.display = 'none';
+  }
+  togglePriceFields();
+  document.getElementById('product-modal').classList.add('open');
+}
+
+function editProduct(id) { openProductModal(id); }
+
+function togglePriceFields() {
+  const type = document.getElementById('pm-price-type').value;
+  document.getElementById('pm-fixed-row').style.display = (type==='fixed'||type==='leaf') ? 'flex' : 'none';
+}
+
+function previewProductImage(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    window._pmImageData = e.target.result;
+    window._pmImageFile = file;
+    document.getElementById('pm-image-name').textContent = file.name + ' ✓';
+    const prev = document.getElementById('pm-image-preview');
+    prev.src = e.target.result; prev.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadImage(file) {
+  if(!isConfigured() || !file) return null;
+  const ext = file.name.split('.').pop();
+  const path = `products/${Date.now()}.${ext}`;
+  const { data, error } = await sb.storage.from('product-images').upload(path, file, { upsert: true });
+  if(error) { showError('Грешка при качване на снимка: ' + error.message); return null; }
+  const { data: urlData } = sb.storage.from('product-images').getPublicUrl(path);
+  return urlData.publicUrl;
+}
+
+async function saveProduct() {
+  const name = document.getElementById('pm-name').value.trim();
+  if(!name) { alert('Въведете име на продукта.'); return; }
+
+  const priceType = document.getElementById('pm-price-type').value;
+  let imageUrl = editingProdId ? (products.find(p=>p.id===editingProdId)||{}).image : null;
+
+  // Качи снимка ако е избрана нова
+  if(window._pmImageFile && isConfigured()) {
+    imageUrl = await uploadImage(window._pmImageFile);
+  } else if(window._pmImageData && !isConfigured()) {
+    imageUrl = window._pmImageData; // локален base64 при липса на Supabase
+  }
+
+  const colors = document.getElementById('pm-color').value.split(',').map(c=>c.trim()).filter(Boolean);
+  const dbData = {
+    name,
+    cat: document.getElementById('pm-cat').value,
+    emoji: document.getElementById('pm-emoji').value || '🌸',
+    price_type: priceType,
+    price: priceType !== 'sizes' ? parseFloat(document.getElementById('pm-price').value)||0 : null,
+    colors,
+    description: document.getElementById('pm-desc').value.trim(),
+    material: document.getElementById('pm-material').value.trim(),
+    image_url: imageUrl,
+    qty: parseInt(document.getElementById('pm-qty').value)||0,
+    min_qty: parseInt(document.getElementById('pm-min').value)||5,
+    status: document.getElementById('pm-status').value,
+    is_special: document.getElementById('pm-cat').value === 'spetsialni',
+  };
+
+  if(isConfigured()) {
+    if(editingProdId) {
+      const { error } = await sb.from('products').update(dbData).eq('id', editingProdId);
+      if(error) { showError('Грешка при запис: ' + error.message); return; }
+      const idx = products.findIndex(p => p.id === editingProdId);
+      products[idx] = { ...products[idx], name: dbData.name, cat: dbData.cat, emoji: dbData.emoji,
+        priceType: dbData.price_type, price: dbData.price, colors, desc: dbData.description,
+        material: dbData.material, image: imageUrl, qty: dbData.qty, minQty: dbData.min_qty, status: dbData.status };
+      // Запис в склада
+      await sb.from('stock_log').insert([{ product_id: editingProdId, product_name: name, type: 'adj', quantity: dbData.qty, note: 'Редактиран продукт' }]);
+    } else {
+      const { data: inserted, error } = await sb.from('products').insert([dbData]).select().single();
+      if(error) { showError('Грешка при запис: ' + error.message); return; }
+      products.push({ id: inserted.id, name: inserted.name, cat: inserted.cat, emoji: inserted.emoji,
+        priceType: inserted.price_type, price: inserted.price, colors: inserted.colors || [],
+        desc: inserted.description, material: inserted.material, image: inserted.image_url,
+        qty: inserted.qty, minQty: inserted.min_qty, status: inserted.status, special: inserted.is_special });
+      await sb.from('stock_log').insert([{ product_id: inserted.id, product_name: name, type: 'in', quantity: dbData.qty, note: 'Нов продукт добавен' }]);
+    }
+  } else {
+    // Офлайн режим — само локален кеш
+    if(editingProdId) {
+      const idx = products.findIndex(p => p.id === editingProdId);
+      products[idx] = { ...products[idx], name: dbData.name, cat: dbData.cat, emoji: dbData.emoji,
+        priceType: dbData.price_type, price: dbData.price, colors, desc: dbData.description,
+        material: dbData.material, image: imageUrl, qty: dbData.qty, minQty: dbData.min_qty, status: dbData.status };
+    } else {
+      products.push({ id: nextProdId++, name, cat: dbData.cat, emoji: dbData.emoji,
+        priceType: dbData.price_type, price: dbData.price, colors, desc: dbData.description,
+        material: dbData.material, image: imageUrl, qty: dbData.qty, minQty: dbData.min_qty,
+        status: dbData.status, special: dbData.is_special });
+    }
+  }
+
+  closeModal('product-modal');
+  renderProducts(); renderStock(); renderDashboard();
+  alert(editingProdId ? '✅ Продуктът е обновен!' : '✅ Продуктът е добавен успешно!');
+}
+
+async function deleteProduct(id) {
+  const p = products.find(x => x.id === id);
+  if(!confirm(`Изтриване на "${p.name}"?`)) return;
+  if(isConfigured()) {
+    const { error } = await sb.from('products').delete().eq('id', id);
+    if(error) { showError('Грешка: ' + error.message); return; }
+  }
+  products = products.filter(x => x.id !== id);
+  renderProducts(); renderStock(); renderDashboard();
+}
+
+// ── STOCK ─────────────────────────────────────────────
+function renderStock() {
+  let filtered = products.filter(p => {
+    const matchText = !stockFilter || p.name.toLowerCase().includes(stockFilter.toLowerCase());
+    const matchCat = !stockCatFilter || p.cat === stockCatFilter;
+    return matchText && matchCat;
+  });
+  const tbody = document.getElementById('stock-tbody');
+  tbody.innerHTML = filtered.map(p => `
+    <tr>
+      <td><strong>${p.emoji} ${p.name}</strong></td>
+      <td style="font-size:12px;">${CATS[p.cat]}</td>
+      <td style="font-size:12px;">${priceTypeLabel(p.priceType)}</td>
+      <td>
+        <div class="stock-bar-wrap">
+          <div class="stock-bar-bg"><div class="stock-bar-fill" style="width:${Math.min(100,Math.round(p.qty/Math.max(p.minQty*2,1)*100))}%;background:${p.qty===0?'var(--danger)':p.qty<=p.minQty?'var(--gold)':'var(--sage)'};"></div></div>
+          <span class="stock-num" style="color:${p.qty===0?'var(--danger)':p.qty<=p.minQty?'var(--warn)':'var(--success)'};">${p.qty}</span>
+        </div>
+      </td>
+      <td style="font-size:13px;">${p.minQty} бр.</td>
+      <td>
+        <div class="qty-adj">
+          <button onclick="adjustQty(${p.id},-1)">−</button>
+          <span class="num">${p.qty}</span>
+          <button onclick="adjustQty(${p.id},1)">+</button>
+          <input type="number" min="0" value="${p.qty}" style="width:54px;border:1px solid var(--rose-light);border-radius:6px;padding:3px 6px;font-size:12px;font-family:'Lato',sans-serif;" onchange="setQty(${p.id},this.value)">
+        </div>
+      </td>
+      <td><input placeholder="Бележка..." style="border:1px solid var(--rose-light);border-radius:8px;padding:5px 10px;font-size:12px;width:130px;font-family:'Lato',sans-serif;" onchange="addNote(${p.id},this.value)"></td>
+    </tr>`).join('');
+}
+
+function filterStock(v) { stockFilter = v; renderStock(); }
+function filterStockCat(v) { stockCatFilter = v; renderStock(); }
+
+async function adjustQty(id, delta) {
+  const p = products.find(x => x.id === id);
+  if(!p) return;
+  const prev = p.qty;
+  p.qty = Math.max(0, p.qty + delta);
+  if(p.qty !== prev) {
+    if(isConfigured()) {
+      await sb.from('products').update({ qty: p.qty }).eq('id', id);
+      await sb.from('stock_log').insert([{ product_id: id, product_name: p.name, type: delta>0?'in':'out', quantity: Math.abs(delta), note: `${p.name}: ${delta>0?'+':''}${delta} бр.` }]);
+    }
+    stockLog.unshift({ type: delta>0?'in':'out', text: `${p.name}: ${delta>0?'+':''}${delta} бр. (${prev} → ${p.qty})`, time: nowStr() });
+  }
+  renderStock(); renderDashboard(); renderReport();
+}
+
+async function setQty(id, val) {
+  const p = products.find(x => x.id === id);
+  if(!p) return;
+  const prev = p.qty;
+  p.qty = Math.max(0, parseInt(val)||0);
+  if(p.qty !== prev) {
+    if(isConfigured()) {
+      await sb.from('products').update({ qty: p.qty }).eq('id', id);
+      await sb.from('stock_log').insert([{ product_id: id, product_name: p.name, type: 'adj', quantity: p.qty, note: `Коригирано от ${prev} на ${p.qty} бр.` }]);
+    }
+    stockLog.unshift({ type: 'adj', text: `${p.name}: коригирано от ${prev} на ${p.qty} бр.`, time: nowStr() });
+  }
+  renderStock(); renderDashboard(); renderReport();
+}
+
+async function addNote(id, note) {
+  if(!note.trim()) return;
+  const p = products.find(x => x.id === id);
+  if(!p) return;
+  if(isConfigured()) {
+    await sb.from('stock_log').insert([{ product_id: id, product_name: p.name, type: 'adj', quantity: 0, note }]);
+  }
+  stockLog.unshift({ type: 'adj', text: `${p.name}: ${note}`, time: nowStr() });
+  renderLog();
+}
+
+async function quickRestock(id) {
+  const p = products.find(x => x.id === id);
+  const n = prompt(`Зареждане на "${p.name}". Въведете брой за добавяне:`, '10');
+  if(n && parseInt(n) > 0) {
+    const add = parseInt(n);
+    p.qty += add;
+    if(isConfigured()) {
+      await sb.from('products').update({ qty: p.qty }).eq('id', id);
+      await sb.from('stock_log').insert([{ product_id: id, product_name: p.name, type: 'in', quantity: add, note: `Заприхождаване: +${add} бр.` }]);
+    }
+    stockLog.unshift({ type: 'in', text: `Заприхождаване: ${p.name} +${add} бр. (общо: ${p.qty})`, time: nowStr() });
+    renderDashboard(); renderStock(); renderReport();
+  }
+}
+
+function renderLog() {
+  document.getElementById('stock-log').innerHTML = stockLog.length
+    ? stockLog.map(l => `<div class="log-item">
+        <div class="log-dot ${l.type==='in'?'log-in':l.type==='out'?'log-out':'log-adj'}"></div>
+        <div><div class="log-text">${l.text}</div><div class="log-time">${l.time}</div></div>
+      </div>`).join('')
+    : '<p style="color:var(--text-light);font-size:14px;text-align:center;padding:20px;">Няма движения</p>';
+}
+
+function renderReport() {
+  const totalQty = products.reduce((s,p) => s+p.qty, 0);
+  const low = products.filter(p => p.qty <= p.minQty).length;
+  document.getElementById('rep-total').textContent = products.length;
+  document.getElementById('rep-low').textContent = low;
+  document.getElementById('rep-qty').textContent = totalQty;
+  document.getElementById('rep-moves').textContent = stockLog.filter(l => l.time && l.time.includes(todayShort())).length;
+
+  const catMap = {};
+  products.forEach(p => {
+    if(!catMap[p.cat]) catMap[p.cat] = {count:0, qty:0, low:false};
+    catMap[p.cat].count++;
+    catMap[p.cat].qty += p.qty;
+    if(p.qty <= p.minQty) catMap[p.cat].low = true;
+  });
+  document.getElementById('report-tbody').innerHTML = Object.entries(catMap).map(([cat,d]) => `
+    <tr><td>${CATS[cat]}</td><td>${d.count} модела</td><td>${d.qty} бр.</td>
+    <td><span class="badge ${d.low?'badge-warn':'badge-ok'}">${d.low?'⚠️ Ниска наличност':'✅ ОК'}</span></td></tr>`).join('');
+}
+
+// ── SPECIAL ORDERS ────────────────────────────────────
+function renderSpecial() {
+  document.getElementById('special-tbody').innerHTML = specialOrders.length
+    ? specialOrders.map(s => `
+    <tr><td><strong>${s.name}</strong></td>
+    <td><a href="mailto:${s.email}" style="color:var(--rose);text-decoration:none;">${s.email}</a></td>
+    <td>${s.phone}</td><td>${s.cat}</td>
+    <td style="font-size:12px;max-width:180px;">${s.desc}</td>
+    <td style="font-size:12px;">${s.date}</td>
+    <td><span class="badge ${s.status==='Нова'?'badge-new':s.status==='В процес'?'badge-warn':'badge-ok'}">${s.status}</span></td></tr>`).join('')
+    : '<tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:20px;">Няма специални запитвания</td></tr>';
+}
+
+// ── HELPERS ───────────────────────────────────────────
+function statusBadge(s) {
+  const m = {pending:'<span class="badge badge-pending">Нова</span>',
+    sent:'<span class="badge badge-sent">Изпратена</span>',
+    done:'<span class="badge badge-done">Завършена</span>'};
+  return m[s] || s;
+}
+function stockBadge(qty, min) {
+  if(qty === 0) return `<span class="badge badge-out">Изчерпан</span>`;
+  if(qty <= min) return `<span class="badge badge-warn">Ниска: ${qty} бр.</span>`;
+  return `<span class="badge badge-ok">${qty} бр.</span>`;
+}
+function priceTypeLabel(t) { return {sizes:'По размер',fixed:'Фиксирана',leaf:'Листа'}[t] || t; }
+function priceDisplay(p) {
+  if(p.priceType==='sizes') return '0.40 / 0.50 / 0.60 / 0.75 €';
+  if(p.price !== undefined && p.price !== null) return parseFloat(p.price).toFixed(2) + ' €';
+  return '—';
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function nowStr() {
+  const d = new Date();
+  return `${d.getDate()} ${['яну','фев','мар','апр','май','юни','юли','авг','сеп','окт','ное','дек'][d.getMonth()]}, ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function todayShort() {
+  const d = new Date();
+  return `${d.getDate()} ${['яну','фев','мар','апр','май','юни','юли','авг','сеп','окт','ное','дек'][d.getMonth()]}`;
+}
+// ── ПАРОЛА ────────────────────────────────────────────
+const DEFAULT_PASSWORD = 'RozaMimoza2025';
+const SESSION_KEY = 'rm_admin_auth';
+const PW_KEY = 'rm_admin_pw';
+
+function getPassword() {
+  return localStorage.getItem(PW_KEY) || DEFAULT_PASSWORD;
+}
+
+function checkLogin() {
+  const input = document.getElementById('login-password').value;
+  if(input === getPassword()) {
+    sessionStorage.setItem(SESSION_KEY, '1');
+    document.getElementById('login-screen').style.display = 'none';
+    document.querySelector('.sidebar').style.display = 'flex';
+    document.querySelector('.main').style.display = 'flex';
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+    document.getElementById('login-password').value = '';
+    document.getElementById('login-password').focus();
+  }
+}
+
+function changePassword() {
+  const current = document.getElementById('pw-current').value;
+  const newPw = document.getElementById('pw-new').value;
+  const confirm = document.getElementById('pw-confirm').value;
+  const msg = document.getElementById('pw-msg');
+
+  if(current !== getPassword()) {
+    msg.style.display = 'block';
+    msg.style.background = '#FAECEA';
+    msg.style.color = '#D85A30';
+    msg.textContent = '❌ Грешна текуща парола.';
+    return;
+  }
+  if(newPw.length < 6) {
+    msg.style.display = 'block';
+    msg.style.background = '#FAECEA';
+    msg.style.color = '#D85A30';
+    msg.textContent = '❌ Новата парола трябва да е поне 6 символа.';
+    return;
+  }
+  if(newPw !== confirm) {
+    msg.style.display = 'block';
+    msg.style.background = '#FAECEA';
+    msg.style.color = '#D85A30';
+    msg.textContent = '❌ Двете пароли не съвпадат.';
+    return;
+  }
+  localStorage.setItem(PW_KEY, newPw);
+  msg.style.display = 'block';
+  msg.style.background = '#E8F5EE';
+  msg.style.color = '#2E7D52';
+  msg.textContent = '✅ Паролата е сменена успешно!';
+  document.getElementById('pw-current').value = '';
+  document.getElementById('pw-new').value = '';
+  document.getElementById('pw-confirm').value = '';
+}
+
+function logout() {
+  sessionStorage.removeItem(SESSION_KEY);
+  location.reload();
+}
+
+function saveSupabaseKeys() {
+  alert('ℹ️ Ключовете сега се задават в файла supabase-config.js\nОтвори го с Notepad, попълни URL и KEY, запази и качи папката в Netlify.');
+}
+
+async function testSupabaseConnection() {
+  if(!isConfigured()) {
+    alert('❌ Supabase не е конфигуриран.\nОтвори supabase-config.js с Notepad и попълни SUPABASE_URL и SUPABASE_KEY.');
+    return;
+  }
+  try {
+    const { data, error } = await sb.from('products').select('count').limit(1);
+    if(error) throw error;
+    alert('✅ Връзката работи! Supabase е свързан успешно.');
+  } catch(e) {
+    alert('❌ Грешка: ' + e.message + '\n\nПровери дали SQL скриптът е изпълнен в Supabase.');
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────
+document.getElementById('today-date').textContent = new Date().toLocaleDateString('bg-BG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+// Провери дали вече е влязла в тази сесия
+if(sessionStorage.getItem(SESSION_KEY) === '1') {
+  document.getElementById('login-screen').style.display = 'none';
+  document.querySelector('.sidebar').style.display = 'flex';
+  document.querySelector('.main').style.display = 'flex';
+  loadAll();
+} else {
+  document.querySelector('.sidebar').style.display = 'none';
+  document.querySelector('.main').style.display = 'none';
+  document.getElementById('login-password').focus();
+}
+</script>
+</body>
+</html>
