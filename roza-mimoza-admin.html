@@ -626,13 +626,33 @@
     </div>
     <div class="form-group"><label>Тип ценообразуване</label>
       <select id="pm-price-type" onchange="togglePriceFields()">
-        <option value="sizes">По размер (5см / 4см / 3см / Пъпка)</option>
+        <option value="sizes">По размер (с индивидуални цени)</option>
         <option value="fixed">Фиксирана цена</option>
-        <option value="leaf">Листа (листо / клонче)</option>
+        <option value="leaf">Листа</option>
       </select>
     </div>
+    <div id="pm-sizes-row" style="display:none;">
+      <div class="form-row">
+        <div class="form-group"><label>5 см (€)</label><input id="pm-p5cm" type="number" step="0.05" min="0" placeholder="0.75"></div>
+        <div class="form-group"><label>4 см (€)</label><input id="pm-p4cm" type="number" step="0.05" min="0" placeholder="0.60"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>3 см (€)</label><input id="pm-p3cm" type="number" step="0.05" min="0" placeholder="0.50"></div>
+        <div class="form-group"><label>Пъпка (€)</label><input id="pm-ppupka" type="number" step="0.05" min="0" placeholder="0.40"></div>
+      </div>
+    </div>
     <div id="pm-fixed-row" class="form-group" style="display:none;"><label>Цена (€) *</label><input id="pm-price" type="number" step="0.05" min="0" placeholder="0.00"></div>
-    <div class="form-group"><label>Налични цветове (разделени със запетая)</label><input id="pm-color" placeholder="напр. Розово, Червено, Бяло, Лилаво"></div>
+    <div id="pm-leaf-row" style="display:none;">
+      <div class="form-row">
+        <div class="form-group"><label>Листо (€)</label><input id="pm-plisto" type="number" step="0.05" min="0" placeholder="0.30"></div>
+        <div class="form-group"><label>Клонче (€)</label><input id="pm-pklonche" type="number" step="0.05" min="0" placeholder="0.50"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Цветове (свободен текст — разделени със запетая)</label>
+      <input id="pm-color" placeholder="напр. Розово, Червено, Бяло — или оставете празно">
+      <p style="font-size:11px;color:var(--text-light);margin-top:4px;">Въведете всякакви цветове по желание</p>
+    </div>
     <div class="form-group"><label>Описание на продукта</label><textarea id="pm-desc" placeholder="Ръчно изработена роза от памучен плат. Подходяща за скрапбукинг..." style="height:70px;"></textarea></div>
     <div class="form-group"><label>Материал / техника</label><input id="pm-material" placeholder="напр. Памучен плат, ръчно оцветена"></div>
     <div class="form-group"><label>Снимка на продукта</label>
@@ -743,7 +763,7 @@ async function loadAll() {
 
     products = (pRes.data || []).map(p => ({
       id: p.id, name: p.name, cat: p.cat, emoji: p.emoji || '🌸',
-      priceType: p.price_type, price: p.price,
+      priceType: p.price_type, price: p.price, sizePrices: p.size_prices,
       colors: Array.isArray(p.colors) ? p.colors : (typeof p.colors === 'string' && p.colors ? p.colors.replace(/[{}'"]/g,'').split(',').map(c=>c.trim()).filter(Boolean) : []), desc: p.description, material: p.material,
       image: p.image_url, qty: p.qty, minQty: p.min_qty,
       status: p.status, special: p.is_special, badge: p.badge
@@ -989,8 +1009,16 @@ function openProductModal(editId) {
     document.getElementById('pm-name').value = p.name;
     document.getElementById('pm-cat').value = p.cat;
     document.getElementById('pm-emoji').value = p.emoji;
-    document.getElementById('pm-price-type').value = p.priceType;
+    document.getElementById('pm-price-type').value = p.priceType || 'sizes';
     document.getElementById('pm-price').value = p.price || '';
+    // Load per-size prices
+    const sp = p.sizePrices || {};
+    document.getElementById('pm-p5cm').value = sp['5cm'] || p.price5cm || '';
+    document.getElementById('pm-p4cm').value = sp['4cm'] || p.price4cm || '';
+    document.getElementById('pm-p3cm').value = sp['3cm'] || p.price3cm || '';
+    document.getElementById('pm-ppupka').value = sp['pupka'] || p.pricePupka || '';
+    document.getElementById('pm-plisto').value = sp['listo'] || p.priceListo || '';
+    document.getElementById('pm-pklonche').value = sp['klonche'] || p.priceKlonche || '';
     document.getElementById('pm-color').value = p.colors ? p.colors.join(', ') : '';
     document.getElementById('pm-desc').value = p.desc || '';
     document.getElementById('pm-material').value = p.material || '';
@@ -1001,7 +1029,7 @@ function openProductModal(editId) {
     const prev = document.getElementById('pm-image-preview');
     if(p.image) { prev.src = p.image; prev.style.display = 'block'; } else { prev.style.display = 'none'; }
   } else {
-    ['pm-name','pm-emoji','pm-price','pm-color','pm-desc','pm-material'].forEach(id => document.getElementById(id).value = '');
+    ['pm-name','pm-emoji','pm-price','pm-color','pm-desc','pm-material','pm-p5cm','pm-p4cm','pm-p3cm','pm-ppupka','pm-plisto','pm-pklonche'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
     document.getElementById('pm-cat').value = 'rozi';
     document.getElementById('pm-price-type').value = 'sizes';
     document.getElementById('pm-qty').value = 0;
@@ -1018,7 +1046,9 @@ function editProduct(id) { openProductModal(id); }
 
 function togglePriceFields() {
   const type = document.getElementById('pm-price-type').value;
-  document.getElementById('pm-fixed-row').style.display = (type==='fixed'||type==='leaf') ? 'flex' : 'none';
+  document.getElementById('pm-sizes-row').style.display = type === 'sizes' ? 'block' : 'none';
+  document.getElementById('pm-fixed-row').style.display = type === 'fixed' ? 'flex' : 'none';
+  document.getElementById('pm-leaf-row').style.display = type === 'leaf' ? 'block' : 'none';
 }
 
 function previewProductImage(input) {
@@ -1059,13 +1089,28 @@ async function saveProduct() {
     imageUrl = window._pmImageData; // локален base64 при липса на Supabase
   }
 
-  const colors = document.getElementById('pm-color').value.split(',').map(c=>c.trim()).filter(Boolean);
+  const colorInput = document.getElementById('pm-color').value;
+  const colors = colorInput ? colorInput.split(',').map(c=>c.trim()).filter(Boolean) : [];
+  
+  // Per-size prices
+  const g = id => { const el = document.getElementById(id); return el && el.value ? parseFloat(el.value) : null; };
+  const sizePrices = priceType === 'sizes' ? {
+    '5cm': g('pm-p5cm') || 0.75,
+    '4cm': g('pm-p4cm') || 0.60,
+    '3cm': g('pm-p3cm') || 0.50,
+    'pupka': g('pm-ppupka') || 0.40,
+  } : priceType === 'leaf' ? {
+    'listo': g('pm-plisto') || 0.30,
+    'klonche': g('pm-pklonche') || 0.50,
+  } : null;
+
   const dbData = {
     name,
     cat: document.getElementById('pm-cat').value,
     emoji: document.getElementById('pm-emoji').value || '🌸',
     price_type: priceType,
-    price: priceType !== 'sizes' ? parseFloat(document.getElementById('pm-price').value)||0 : null,
+    price: priceType === 'fixed' ? parseFloat(document.getElementById('pm-price').value)||0 : null,
+    size_prices: sizePrices,
     colors,
     description: document.getElementById('pm-desc').value.trim(),
     material: document.getElementById('pm-material').value.trim(),
@@ -1090,7 +1135,7 @@ async function saveProduct() {
       const { data: inserted, error } = await sb.from('products').insert([dbData]).select().single();
       if(error) { showError('Грешка при запис: ' + error.message); return; }
       products.push({ id: inserted.id, name: inserted.name, cat: inserted.cat, emoji: inserted.emoji,
-        priceType: inserted.price_type, price: inserted.price, colors: Array.isArray(inserted.colors) ? inserted.colors : (typeof inserted.colors === 'string' && inserted.colors ? inserted.colors.replace(/[{}'"]/g,'').split(',').map(c=>c.trim()).filter(Boolean) : []),
+        priceType: inserted.price_type, price: inserted.price, sizePrices: inserted.size_prices, colors: Array.isArray(inserted.colors) ? inserted.colors : (typeof inserted.colors === 'string' && inserted.colors ? inserted.colors.replace(/[{}'"]/g,'').split(',').map(c=>c.trim()).filter(Boolean) : []),
         desc: inserted.description, material: inserted.material, image: inserted.image_url,
         qty: inserted.qty, minQty: inserted.min_qty, status: inserted.status, special: inserted.is_special });
       await sb.from('stock_log').insert([{ product_id: inserted.id, product_name: name, type: 'in', quantity: dbData.qty, note: 'Нов продукт добавен' }]);
@@ -1123,7 +1168,7 @@ async function deleteProduct(id) {
     if(error) { showError('Грешка: ' + error.message); return; }
   }
   products = products.filter(x => x.id !== id);
-  renderProducts(); renderStock(); renderDashboard();
+  await loadAll();
 }
 
 // ── STOCK ─────────────────────────────────────────────

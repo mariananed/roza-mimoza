@@ -996,12 +996,33 @@
 <script src="supabase-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SIZES = {
+const DEFAULT_SIZES = {
   '5cm': { label: '5 см', price: 0.75 },
   '4cm': { label: '4 см', price: 0.60 },
   '3cm': { label: '3 см', price: 0.50 },
   'pupka': { label: 'Пъпка', price: 0.40 }
 };
+const DEFAULT_LEAF = {
+  'listo': { label: 'Листо', price: 0.30 },
+  'klonche': { label: 'Клонче', price: 0.50 }
+};
+
+function getSizes(p) {
+  if(p.priceType === 'leaf') {
+    const sp = p.sizePrices || {};
+    return {
+      'listo': { label: 'Листо', price: sp['listo'] || 0.30 },
+      'klonche': { label: 'Клонче', price: sp['klonche'] || 0.50 },
+    };
+  }
+  const sp = p.sizePrices || {};
+  return {
+    '5cm':   { label: '5 см',  price: sp['5cm']   || 0.75 },
+    '4cm':   { label: '4 см',  price: sp['4cm']   || 0.60 },
+    '3cm':   { label: '3 см',  price: sp['3cm']   || 0.50 },
+    'pupka': { label: 'Пъпка', price: sp['pupka'] || 0.40 },
+  };
+}
 
 const PRODUCTS = [
   { id:1, name:'Роза класическа', cat:'rozi', emoji:'🌹', sizes:true, badge:'new', colors:['Червено','Розово','Бяло','Праскова'], desc:'Ръчно изработена класическа роза от памучен плат. Перфектна за скрапбукинг, картички и декорации.', material:'Памучен плат' },
@@ -1027,7 +1048,10 @@ let selectedSizes = {};
 let selectedColors = {};
 
 PRODUCTS.forEach(p => {
-  if(p.sizes) selectedSizes[p.id] = '5cm';
+  if(p.sizes || p.priceType === 'leaf') {
+    const sz = getSizes(p);
+    selectedSizes[p.id] = Object.keys(sz)[0];
+  }
   if(p.colors && p.colors.length > 0) selectedColors[p.id] = p.colors[0];
 });
 
@@ -1061,16 +1085,19 @@ function productCard(p) {
 
   let sizeHtml = '';
   let priceHtml = '';
-  if(p.sizes) {
-    const sel = selectedSizes[p.id] || '5cm';
+  if(p.sizes || p.priceType === 'leaf') {
+    const sizes = getSizes(p);
+    const defaultKey = Object.keys(sizes)[0];
+    const sel = selectedSizes[p.id] || defaultKey;
     sizeHtml = `<div class="size-selector">
-      ${Object.entries(SIZES).map(([k,v]) =>
+      ${Object.entries(sizes).map(([k,v]) =>
         `<button class="size-btn${sel===k?' active':''}" onclick="selectSize(${p.id},'${k}',this)">${v.label}</button>`
       ).join('')}
     </div>`;
-    priceHtml = `<div class="price">${SIZES[sel].price.toFixed(2)} €<span>/бр.</span></div>`;
+    const currentPrice = (sizes[sel] || sizes[defaultKey]).price;
+    priceHtml = `<div class="price">${currentPrice.toFixed(2)} €<span>/бр.</span></div>`;
   } else {
-    priceHtml = `<div class="price">${p.price.toFixed(2)} €<span>/бр.</span></div>`;
+    priceHtml = `<div class="price">${(p.price||0).toFixed(2)} €<span>/бр.</span></div>`;
   }
 
   let colorHtml = '';
@@ -1137,9 +1164,13 @@ function selectColor(id, color, btn) {
 
 function addToCart(id) {
   const p = PRODUCTS.find(x => x.id === id);
-  const size = p.sizes ? selectedSizes[id] : null;
-  const price = p.sizes ? SIZES[size].price : p.price;
-  const sizeLabel = size ? SIZES[size].label : '';
+  const hasSizes = p.sizes || p.priceType === 'leaf';
+  const size = hasSizes ? selectedSizes[id] : null;
+  const sizes = hasSizes ? getSizes(p) : null;
+  const defaultKey = sizes ? Object.keys(sizes)[0] : null;
+  const sizeKey = size || defaultKey;
+  const price = hasSizes ? (sizes[sizeKey] || sizes[defaultKey]).price : (p.price || 0);
+  const sizeLabel = hasSizes && sizes ? (sizes[sizeKey] || sizes[defaultKey]).label : '';
   let color = '';
   if(p.special) {
     const inp = document.getElementById('color-input-' + id);
@@ -1285,6 +1316,7 @@ async function loadProductsFromDB() {
           emoji: p.emoji || '🌸',
           sizes: p.price_type === 'sizes',
           price: p.price,
+          sizePrices: p.size_prices,
           colors: Array.isArray(p.colors) ? p.colors : (typeof p.colors === 'string' && p.colors ? p.colors.replace(/[{}'\"]/g,'').split(',').map(c=>c.trim()).filter(Boolean) : []),
           desc: p.description,
           material: p.material,
@@ -1298,7 +1330,10 @@ async function loadProductsFromDB() {
         });
       });
       PRODUCTS.forEach(p => {
-        if(p.sizes) selectedSizes[p.id] = '5cm';
+        if(p.sizes || p.priceType === 'leaf') {
+          const sz = getSizes(p);
+          selectedSizes[p.id] = Object.keys(sz)[0];
+        }
         if(p.colors && p.colors.length > 0) selectedColors[p.id] = p.colors[0];
       });
     }
