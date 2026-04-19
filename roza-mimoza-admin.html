@@ -744,7 +744,7 @@ async function loadAll() {
     products = (pRes.data || []).map(p => ({
       id: p.id, name: p.name, cat: p.cat, emoji: p.emoji || '🌸',
       priceType: p.price_type, price: p.price,
-      colors: p.colors || [], desc: p.description, material: p.material,
+      colors: Array.isArray(p.colors) ? p.colors : (typeof p.colors === 'string' && p.colors ? p.colors.replace(/[{}'"]/g,'').split(',').map(c=>c.trim()).filter(Boolean) : []), desc: p.description, material: p.material,
       image: p.image_url, qty: p.qty, minQty: p.min_qty,
       status: p.status, special: p.is_special, badge: p.badge
     }));
@@ -1090,7 +1090,7 @@ async function saveProduct() {
       const { data: inserted, error } = await sb.from('products').insert([dbData]).select().single();
       if(error) { showError('Грешка при запис: ' + error.message); return; }
       products.push({ id: inserted.id, name: inserted.name, cat: inserted.cat, emoji: inserted.emoji,
-        priceType: inserted.price_type, price: inserted.price, colors: inserted.colors || [],
+        priceType: inserted.price_type, price: inserted.price, colors: Array.isArray(inserted.colors) ? inserted.colors : (typeof inserted.colors === 'string' && inserted.colors ? inserted.colors.replace(/[{}'"]/g,'').split(',').map(c=>c.trim()).filter(Boolean) : []),
         desc: inserted.description, material: inserted.material, image: inserted.image_url,
         qty: inserted.qty, minQty: inserted.min_qty, status: inserted.status, special: inserted.is_special });
       await sb.from('stock_log').insert([{ product_id: inserted.id, product_name: name, type: 'in', quantity: dbData.qty, note: 'Нов продукт добавен' }]);

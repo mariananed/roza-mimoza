@@ -1285,7 +1285,7 @@ async function loadProductsFromDB() {
           emoji: p.emoji || '🌸',
           sizes: p.price_type === 'sizes',
           price: p.price,
-          colors: p.colors || [],
+          colors: Array.isArray(p.colors) ? p.colors : (typeof p.colors === 'string' && p.colors ? p.colors.replace(/[{}'\"]/g,'').split(',').map(c=>c.trim()).filter(Boolean) : []),
           desc: p.description,
           material: p.material,
           image: p.image_url,
