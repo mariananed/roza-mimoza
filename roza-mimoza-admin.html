@@ -531,12 +531,13 @@
       <div style="max-width:540px;">
         <div class="sec-header" style="margin-bottom:20px;"><h2>Настройки на магазина</h2></div>
         <div class="table-wrap" style="padding:24px;">
-          <div class="form-group"><label>Имейл за контакт</label><input value="mariana99jordan@gmail.com"></div>
-          <div class="form-group"><label>Facebook страница</label><input value="https://www.facebook.com/share/1GTHzsR8YT/"></div>
-          <div class="form-group"><label>Минимален праг за предупреждение (бр.)</label><input type="number" value="5" min="1"></div>
-          <div class="form-group"><label>Безплатна доставка над (€)</label><input type="number" value="15" min="0" step="0.5"></div>
-          <div class="form-group"><label>Съобщение в горната лента</label><input value="🌸 Безплатна доставка при поръчка над 15 евро | Доставка с Еконт | Наложен платеж"></div>
-          <button class="btn btn-primary" style="margin-top:8px;" onclick="alert('Настройките са запазени! ✅')">Запази промените</button>
+          <div class="form-group"><label>Имейл за контакт</label><input id="set-email" value="mariana99jordan@gmail.com"></div>
+          <div class="form-group"><label>Facebook страница</label><input id="set-facebook" value="https://www.facebook.com/share/1GTHzsR8YT/"></div>
+          <div class="form-group"><label>Минимален праг за предупреждение (бр.)</label><input id="set-minstock" type="number" value="5" min="1"></div>
+          <div class="form-group"><label>Безплатна доставка над (€)</label><input id="set-freeship" type="number" value="15" min="0" step="0.5"></div>
+          <div class="form-group"><label>Съобщение в горната лента</label><input id="set-banner" value="🌸 Безплатна доставка при поръчка над 15 евро | Доставка с Еконт | Наложен платеж"></div>
+          <div id="set-msg" style="display:none;border-radius:8px;padding:9px 14px;font-size:13px;margin-bottom:10px;"></div>
+          <button class="btn btn-primary" style="margin-top:8px;" onclick="saveSettings()">💾 Запази промените</button>
         </div>
 
         <div class="sec-header" style="margin:28px 0 16px;"><h2>🔗 Supabase връзка</h2></div>
@@ -585,14 +586,15 @@
         <div class="table-wrap" style="padding:20px;">
           <p style="font-size:13px;color:var(--text-mid);margin-bottom:14px;">Цени за стандартни размери (€/бр.):</p>
           <div class="form-row">
-            <div class="form-group"><label>5 см</label><input type="number" value="0.75" step="0.05"></div>
-            <div class="form-group"><label>4 см</label><input type="number" value="0.60" step="0.05"></div>
-            <div class="form-group"><label>3 см</label><input type="number" value="0.50" step="0.05"></div>
-            <div class="form-group"><label>Пъпка</label><input type="number" value="0.40" step="0.05"></div>
-            <div class="form-group"><label>Листо</label><input type="number" value="0.30" step="0.05"></div>
-            <div class="form-group"><label>Клонче листа</label><input type="number" value="0.50" step="0.05"></div>
+            <div class="form-group"><label>5 см</label><input id="price-5cm" type="number" value="0.75" step="0.05"></div>
+            <div class="form-group"><label>4 см</label><input id="price-4cm" type="number" value="0.60" step="0.05"></div>
+            <div class="form-group"><label>3 см</label><input id="price-3cm" type="number" value="0.50" step="0.05"></div>
+            <div class="form-group"><label>Пъпка</label><input id="price-pupka" type="number" value="0.40" step="0.05"></div>
+            <div class="form-group"><label>Листо</label><input id="price-listo" type="number" value="0.30" step="0.05"></div>
+            <div class="form-group"><label>Клонче листа</label><input id="price-klonche" type="number" value="0.50" step="0.05"></div>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="alert('Цените са запазени! ✅')">Запази цените</button>
+          <div id="prices-msg" style="display:none;border-radius:8px;padding:9px 14px;font-size:13px;margin:8px 0;"></div>
+          <button class="btn btn-primary btn-sm" onclick="savePrices()">💾 Запази цените</button>
         </div>
       </div>
     </div>
@@ -810,6 +812,7 @@ function showTab(id, el) {
   if(id==='stock') renderStock();
   if(id==='special') renderSpecial();
   if(id==='settings') {
+    loadSettings();
     const box = document.getElementById('sb-status-box');
     if(box) {
       if(isConfigured()) {
@@ -1108,7 +1111,7 @@ async function saveProduct() {
   }
 
   closeModal('product-modal');
-  renderProducts(); renderStock(); renderDashboard();
+  await loadAll();
   alert(editingProdId ? '✅ Продуктът е обновен!' : '✅ Продуктът е добавен успешно!');
 }
 
@@ -1341,6 +1344,75 @@ function changePassword() {
   document.getElementById('pw-current').value = '';
   document.getElementById('pw-new').value = '';
   document.getElementById('pw-confirm').value = '';
+}
+
+// ── SETTINGS SAVE ─────────────────────────────────────
+const SETTINGS_KEY = 'rm_shop_settings';
+
+function loadSettings() {
+  try {
+    const saved = localStorage.getItem(SETTINGS_KEY);
+    if(!saved) return;
+    const s = JSON.parse(saved);
+    if(s.email) { const el = document.getElementById('set-email'); if(el) el.value = s.email; }
+    if(s.facebook) { const el = document.getElementById('set-facebook'); if(el) el.value = s.facebook; }
+    if(s.minstock) { const el = document.getElementById('set-minstock'); if(el) el.value = s.minstock; }
+    if(s.freeship) { const el = document.getElementById('set-freeship'); if(el) el.value = s.freeship; }
+    if(s.banner) { const el = document.getElementById('set-banner'); if(el) el.value = s.banner; }
+    if(s.price5cm) { const el = document.getElementById('price-5cm'); if(el) el.value = s.price5cm; }
+    if(s.price4cm) { const el = document.getElementById('price-4cm'); if(el) el.value = s.price4cm; }
+    if(s.price3cm) { const el = document.getElementById('price-3cm'); if(el) el.value = s.price3cm; }
+    if(s.pricePupka) { const el = document.getElementById('price-pupka'); if(el) el.value = s.pricePupka; }
+    if(s.priceListo) { const el = document.getElementById('price-listo'); if(el) el.value = s.priceListo; }
+    if(s.priceKlonche) { const el = document.getElementById('price-klonche'); if(el) el.value = s.priceKlonche; }
+  } catch(e) {}
+}
+
+function saveSettings() {
+  const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const settings = {
+    email: get('set-email'),
+    facebook: get('set-facebook'),
+    minstock: get('set-minstock'),
+    freeship: get('set-freeship'),
+    banner: get('set-banner'),
+  };
+  try {
+    const existing = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({...existing, ...settings}));
+    showSettingsMsg('set-msg', '✅ Настройките са запазени успешно!', true);
+  } catch(e) {
+    showSettingsMsg('set-msg', '❌ Грешка при запазване: ' + e.message, false);
+  }
+}
+
+function savePrices() {
+  const get = id => { const el = document.getElementById(id); return el ? parseFloat(el.value) : null; };
+  const prices = {
+    price5cm: get('price-5cm'),
+    price4cm: get('price-4cm'),
+    price3cm: get('price-3cm'),
+    pricePupka: get('price-pupka'),
+    priceListo: get('price-listo'),
+    priceKlonche: get('price-klonche'),
+  };
+  try {
+    const existing = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({...existing, ...prices}));
+    showSettingsMsg('prices-msg', '✅ Цените са запазени успешно!', true);
+  } catch(e) {
+    showSettingsMsg('prices-msg', '❌ Грешка при запазване: ' + e.message, false);
+  }
+}
+
+function showSettingsMsg(id, text, ok) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.style.display = 'block';
+  el.style.background = ok ? 'var(--success-light)' : 'var(--danger-light)';
+  el.style.color = ok ? 'var(--success)' : 'var(--danger)';
+  el.textContent = text;
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
 }
 
 function logout() {

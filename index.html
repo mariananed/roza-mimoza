@@ -993,6 +993,8 @@
   </div>
 </div>
 
+<script src="supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SIZES = {
   '5cm': { label: '5 см', price: 0.75 },
@@ -1255,8 +1257,59 @@ function changeHero(e) {
   bg.innerHTML = '';
 }
 
+// ── SUPABASE INIT ─────────────────────────────────────
+let sbShop = null;
+try {
+  if(typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL !== 'POSTAVI_TUK_URL') {
+    sbShop = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+} catch(e) {}
+
+async function loadProductsFromDB() {
+  if(!sbShop) { renderProducts(); return; }
+  try {
+    const { data, error } = await sbShop
+      .from('products')
+      .select('*')
+      .eq('status', 'active')
+      .order('id');
+    if(error) throw error;
+    if(data && data.length > 0) {
+      // Map Supabase fields to local format
+      PRODUCTS.length = 0;
+      data.forEach(p => {
+        PRODUCTS.push({
+          id: p.id,
+          name: p.name,
+          cat: p.cat,
+          emoji: p.emoji || '🌸',
+          sizes: p.price_type === 'sizes',
+          price: p.price,
+          colors: p.colors || [],
+          desc: p.description,
+          material: p.material,
+          image: p.image_url,
+          qty: p.qty,
+          minQty: p.min_qty,
+          status: p.status,
+          special: p.is_special,
+          badge: p.badge,
+          priceType: p.price_type,
+        });
+      });
+      PRODUCTS.forEach(p => {
+        if(p.sizes) selectedSizes[p.id] = '5cm';
+        if(p.colors && p.colors.length > 0) selectedColors[p.id] = p.colors[0];
+      });
+    }
+  } catch(e) {
+    console.warn('Зареждане от Supabase неуспешно, използвам локални данни:', e.message);
+  }
+  renderProducts();
+}
+
 // Init
-renderProducts();
+loadProductsFromDB();
 </script>
 <!-- TERMS MODAL -->
 <div id="terms-overlay" style="display:none;position:fixed;inset:0;background:rgba(60,20,30,0.5);z-index:400;overflow-y:auto;padding:30px 16px;">
