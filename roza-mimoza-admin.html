@@ -1065,11 +1065,38 @@ function previewProductImage(input) {
 
 async function uploadImage(file) {
   if(!isConfigured() || !file) return null;
-  const ext = file.name.split('.').pop();
-  const path = `products/${Date.now()}.${ext}`;
-  const { data, error } = await sb.storage.from('product-images').upload(path, file, { upsert: true });
-  if(error) { showError('Грешка при качване на снимка: ' + error.message); return null; }
+
+  // Провери размера — max 5MB
+  if(file.size > 5 * 1024 * 1024) {
+    showError('Снимката е твърде голяма. Максимален размер: 5MB. Намали я на squoosh.app');
+    return null;
+  }
+
+  // Провери формата
+  const allowed = ['image/jpeg','image/jpg','image/png','image/webp'];
+  if(!allowed.includes(file.type)) {
+    showError('Неподдържан формат. Използвай JPG, PNG или WebP.');
+    return null;
+  }
+
+  document.getElementById('pm-image-name').textContent = '⏳ Качване...';
+
+  const ext = file.name.split('.').pop().toLowerCase();
+  const safeName = Date.now() + '_' + Math.random().toString(36).substr(2,6) + '.' + ext;
+  const path = `products/${safeName}`;
+
+  const { data, error } = await sb.storage
+    .from('product-images')
+    .upload(path, file, { upsert: true, contentType: file.type });
+
+  if(error) {
+    document.getElementById('pm-image-name').textContent = '❌ Грешка при качване';
+    showError('Грешка при качване на снимка: ' + error.message + '\n\nПровери дали си изпълнила fix-storage-policies.sql в Supabase.');
+    return null;
+  }
+
   const { data: urlData } = sb.storage.from('product-images').getPublicUrl(path);
+  document.getElementById('pm-image-name').textContent = '✅ Снимката е качена успешно!';
   return urlData.publicUrl;
 }
 
