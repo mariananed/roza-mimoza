@@ -738,7 +738,7 @@
   <div class="header-actions">
     <div class="search-bar">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="#B08080" stroke-width="1.5"/><line x1="9.5" y1="9.5" x2="12.5" y2="12.5" stroke="#B08080" stroke-width="1.5" stroke-linecap="round"/></svg>
-      <input type="text" placeholder="Търсене на цветя...">
+      <input type="text" id="search-input" placeholder="Търсене на цветя..." oninput="searchProducts(this.value)">
     </div>
     <button class="cart-btn" onclick="toggleCart()">
       🛒 Количка
@@ -783,9 +783,9 @@
   <input type="file" id="hero-upload" class="hero-change-input" accept="image/*" onchange="changeHero(event)">
 
   <div class="hero-content">
-    <h2>Ръчно изработени<br><em>цветя с душа</em></h2>
-    <p>Авторски тъкани цветя и декорации за скрапбукинг — всяко е уникално и направено с любов</p>
-    <button class="hero-btn">Разгледай колекцията</button>
+    <h2 style="color:#fff;text-shadow:0 2px 16px rgba(0,0,0,0.6);">Ръчно изработени цветя с душа</h2>
+    <p style="color:rgba(255,255,255,0.95);text-shadow:0 1px 8px rgba(0,0,0,0.5);">Авторски цветя от плат и декорации за всякакви проекти — уникални и направени с поглед към детайла</p>
+    <button class="hero-btn" onclick="document.getElementById('products-section').scrollIntoView({behavior:'smooth'})">Разгледай колекцията</button>
   </div>
 </div>
 
@@ -838,7 +838,7 @@
 </div>
 
 <!-- Products Section -->
-<div class="section">
+<div class="section" id="products-section">
   <div class="section-header">
     <h3 id="section-title">Всички продукти</h3>
     <div class="line"></div>
@@ -1070,6 +1070,23 @@ PRODUCTS.forEach(p => {
   if(p.colors && p.colors.length > 0) selectedColors[String(p.id)] = p.colors[0];
 });
 
+function searchProducts(query) {
+  const q = query.toLowerCase().trim();
+  const grid = document.getElementById('product-grid');
+  const filtered = PRODUCTS.filter(p => {
+    if(currentCat !== 'all' && p.cat !== currentCat) return false;
+    if(!q) return true;
+    return p.name.toLowerCase().includes(q) ||
+           (p.desc && p.desc.toLowerCase().includes(q)) ||
+           (p.colors && p.colors.some(c => c.toLowerCase().includes(q))) ||
+           catName(p.cat).toLowerCase().includes(q);
+  });
+  if(!q) { renderProducts(); return; }
+  grid.innerHTML = filtered.length
+    ? filtered.map(p => productCard(p)).join('')
+    : `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-light);font-size:14px;">🌸 Няма намерени продукти за "${query}"</div>`;
+}
+
 function filterCat(cat, el) {
   currentCat = cat;
   document.querySelectorAll('nav a, .cat-pill').forEach(e => e.classList.remove('active'));
@@ -1143,6 +1160,28 @@ function productCard(p) {
     ? `<div style="font-size:10px;color:var(--text-light);margin-bottom:8px;">&#x1F9F5; ${p.material}</div>`
     : '';
 
+  // Наличност индикатор
+  const qty = p.qty || 0;
+  let stockHtml = '';
+  if(qty === 0) {
+    stockHtml = `<div style="display:inline-flex;align-items:center;gap:5px;background:#FAECEA;border-radius:10px;padding:3px 10px;font-size:11px;font-weight:700;color:#D85A30;margin-bottom:8px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:#D85A30;display:inline-block;"></span> Изчерпан
+    </div>`;
+  } else if(qty <= 5) {
+    stockHtml = `<div style="display:inline-flex;align-items:center;gap:5px;background:#FFF8E1;border-radius:10px;padding:3px 10px;font-size:11px;font-weight:700;color:#B8860B;margin-bottom:8px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:#C9A96E;display:inline-block;"></span> Остават ${qty} бр.
+    </div>`;
+  } else {
+    stockHtml = `<div style="display:inline-flex;align-items:center;gap:5px;background:#E8F5EE;border-radius:10px;padding:3px 10px;font-size:11px;font-weight:700;color:#2E7D52;margin-bottom:8px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:#3a8f5a;display:inline-block;"></span> В наличност
+    </div>`;
+  }
+
+  // Деактивирай бутона ако е изчерпан
+  const addBtn = qty === 0
+    ? `<button class="add-btn" disabled style="opacity:0.4;cursor:not-allowed;">Изчерпан</button>`
+    : `<button class="add-btn" onclick="addToCart('${p.id}')">+ Добави</button>`;
+
   return `
   <div class="product-card" data-cat="${p.cat}">
     ${badge}
@@ -1152,11 +1191,12 @@ function productCard(p) {
       <h4>${p.name}</h4>
       ${descHtml}
       ${matHtml}
+      ${stockHtml}
       ${colorHtml}
       ${sizeHtml}
       <div class="product-footer">
         ${priceHtml}
-        <button class="add-btn" onclick="addToCart('${p.id}')">+ Добави</button>
+        ${addBtn}
       </div>
     </div>
   </div>`;
@@ -1295,28 +1335,35 @@ function sendSpecialOrder() {
   setTimeout(() => document.getElementById('cf-confirm').style.display = 'none', 5000);
 }
 
+// ── ШАПКА СНИМКА ─────────────────────────────────────
+// Постави URL на снимката тук (от Supabase Storage или друг публичен линк):
+// Например: 'https://xxxxx.supabase.co/storage/v1/object/public/product-images/hero.jpg'
+// Остави '' ако не искаш снимка
+const HERO_IMAGE_URL = '';
+
 function changeHero(e) {
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
-    const dataUrl = ev.target.result;
-    applyHeroImage(dataUrl);
-    try { localStorage.setItem('rm_hero_img', dataUrl); } catch(err) {}
+    applyHeroImage(ev.target.result);
+    try { localStorage.setItem('rm_hero_img', ev.target.result); } catch(err) {}
   };
   reader.readAsDataURL(file);
 }
-function applyHeroImage(dataUrl) {
+function applyHeroImage(url) {
+  if(!url) return;
   const bg = document.getElementById('hero-bg');
-  bg.style.backgroundImage = `url(${dataUrl})`;
+  bg.style.backgroundImage = `url(${url})`;
   bg.style.backgroundSize = 'cover';
   bg.style.backgroundPosition = 'center';
-  // Keep overlay, remove old SVG/img children
   const children = Array.from(bg.children);
   children.forEach(c => { if(c.tagName !== 'DIV') c.remove(); });
 }
-// Load saved hero image on page load
 (function() {
+  // Първо опитай константата в кода
+  if(HERO_IMAGE_URL) { applyHeroImage(HERO_IMAGE_URL); return; }
+  // После опитай localStorage
   try {
     const saved = localStorage.getItem('rm_hero_img');
     if(saved) applyHeroImage(saved);
