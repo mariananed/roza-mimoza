@@ -444,7 +444,6 @@
           <option value="koleda">Коледни звезди</option>
           <option value="bozuri">Божури</option>
           <option value="pelargoniu">Пеларгониуми</option>
-          <option value="lilii">Лилии</option>
           <option value="malki">Малки цветя</option>
           <option value="kolektsii">Колекции</option>
           <option value="spetsialni">Специални</option>
@@ -454,7 +453,7 @@
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Продукт</th><th>Категория</th><th>Тип цена</th><th>Цени</th><th>Цветове</th><th>Наличност</th><th>Статус</th><th></th></tr></thead>
+          <thead><tr><th>Продукт</th><th>Категория</th><th>Цени</th><th>Наличност</th><th>Статус</th><th>Действия</th></tr></thead>
           <tbody id="products-tbody"></tbody>
         </table>
       </div>
@@ -478,8 +477,7 @@
             <option value="koleda">Коледни звезди</option>
             <option value="bozuri">Божури</option>
             <option value="pelargoniu">Пеларгониуми</option>
-            <option value="lilii">Лилии</option>
-            <option value="malki">Малки цветя</option>
+              <option value="malki">Малки цветя</option>
             <option value="kolektsii">Колекции</option>
             <option value="spetsialni">Специални</option>
             <option value="lista">Листа</option>
@@ -615,7 +613,6 @@
           <option value="koleda">Коледни звезди</option>
           <option value="bozuri">Божури</option>
           <option value="pelargoniu">Пеларгониуми</option>
-          <option value="lilii">Лилии</option>
           <option value="malki">Малки цветя</option>
           <option value="kolektsii">Колекции</option>
           <option value="spetsialni">Специални</option>
@@ -632,13 +629,14 @@
       </select>
     </div>
     <div id="pm-sizes-row" style="display:none;">
+      <p style="font-size:12px;color:var(--text-light);margin-bottom:8px;">⚠️ Попълни само наличните размери — само те ще се показват на клиентите.</p>
       <div class="form-row">
-        <div class="form-group"><label>5 см (€)</label><input id="pm-p5cm" type="number" step="0.05" min="0" placeholder="0.75"></div>
-        <div class="form-group"><label>4 см (€)</label><input id="pm-p4cm" type="number" step="0.05" min="0" placeholder="0.60"></div>
+        <div class="form-group"><label>5 см (€) — остави празно ако няма</label><input id="pm-p5cm" type="number" step="0.05" min="0" placeholder="напр. 0.75"></div>
+        <div class="form-group"><label>4 см (€) — остави празно ако няма</label><input id="pm-p4cm" type="number" step="0.05" min="0" placeholder="напр. 0.60"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>3 см (€)</label><input id="pm-p3cm" type="number" step="0.05" min="0" placeholder="0.50"></div>
-        <div class="form-group"><label>Пъпка (€)</label><input id="pm-ppupka" type="number" step="0.05" min="0" placeholder="0.40"></div>
+        <div class="form-group"><label>3 см (€) — остави празно ако няма</label><input id="pm-p3cm" type="number" step="0.05" min="0" placeholder="напр. 0.50"></div>
+        <div class="form-group"><label>Пъпка (€) — остави празно ако няма</label><input id="pm-ppupka" type="number" step="0.05" min="0" placeholder="напр. 0.40"></div>
       </div>
     </div>
     <div id="pm-fixed-row" class="form-group" style="display:none;"><label>Цена (€) *</label><input id="pm-price" type="number" step="0.05" min="0" placeholder="0.00"></div>
@@ -985,14 +983,13 @@ function renderProducts() {
     const descText = p.desc ? `<div style="font-size:11px;color:var(--text-light);margin-top:2px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.desc}</div>` : '';
     return `<tr>
       <td><div style="display:flex;align-items:center;">${imgThumb}<div><strong>${p.name}</strong>${descText}</div></div></td>
-      <td>${CATS[p.cat]}</td><td>${priceTypeLabel(p.priceType)}</td>
+      <td style="font-size:12px;">${CATS[p.cat]||p.cat}</td>
       <td style="font-size:12px;">${priceDisplay(p)}</td>
-      <td style="max-width:150px;">${colorsHtml}</td>
       <td>${stockBadge(p.qty, p.minQty)}</td>
       <td><span class="badge ${p.status==='active'?'badge-ok':'badge-warn'}">${p.status==='active'?'Активен':'Скрит'}</span></td>
-      <td style="display:flex;gap:6px;">
-        <button class="btn btn-outline btn-sm" onclick="editProduct(${p.id})">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">✕</button>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-outline btn-sm" onclick="editProduct(${p.id})" style="margin-right:4px;">✏️ Редакция</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})">🗑 Изтрий</button>
       </td></tr>`;
   }).join('');
 }
@@ -1001,11 +998,12 @@ function filterProducts(v) { productFilter = v; renderProducts(); }
 function filterProductCat(v) { productCatFilter = v; renderProducts(); }
 
 function openProductModal(editId) {
+  if(editId) editId = typeof editId === 'string' ? parseInt(editId) : editId;
   editingProdId = editId || null;
   window._pmImageData = null;
   document.getElementById('prod-modal-title').textContent = editId ? 'Редактиране на продукт' : 'Нов продукт';
   if(editId) {
-    const p = products.find(x => x.id === editId);
+    const p = products.find(x => x.id == editId);
     document.getElementById('pm-name').value = p.name;
     document.getElementById('pm-cat').value = p.cat;
     document.getElementById('pm-emoji').value = p.emoji;
@@ -1042,7 +1040,7 @@ function openProductModal(editId) {
   document.getElementById('product-modal').classList.add('open');
 }
 
-function editProduct(id) { openProductModal(id); }
+function editProduct(id) { id = typeof id === "string" ? parseInt(id) : id; openProductModal(id); }
 
 function togglePriceFields() {
   const type = document.getElementById('pm-price-type').value;
@@ -1161,7 +1159,8 @@ async function saveProduct() {
 }
 
 async function deleteProduct(id) {
-  const p = products.find(x => x.id === id);
+  id = typeof id === 'string' ? parseInt(id) : id;
+  const p = products.find(x => x.id == id);
   if(!confirm(`Изтриване на "${p.name}"?`)) return;
   if(isConfigured()) {
     const { error } = await sb.from('products').delete().eq('id', id);

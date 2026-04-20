@@ -33,7 +33,7 @@
   }
 
   /* ── LOGO SVG ── */
-  .logo-svg { width: 110px; height: 110px; flex-shrink: 0; }
+  .logo-svg { width: 64px; height: 64px; flex-shrink: 0; }
 
   /* ── TOP BAR ── */
   .top-bar {
@@ -51,10 +51,10 @@
   header {
     background: var(--white);
     border-bottom: 1px solid var(--rose-light);
-    padding: 18px 40px;
+    padding: 8px 24px;
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 14px;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -65,13 +65,13 @@
 
   .brand-text h1 {
     font-family: 'Playfair Display', serif;
-    font-size: 22px;
+    font-size: 17px;
     color: var(--rose);
     line-height: 1.2;
     font-weight: 600;
   }
   .brand-text p {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-light);
     letter-spacing: 0.05em;
     font-weight: 300;
@@ -670,16 +670,9 @@
 <body>
 
 <!-- Admin bar (visible only to owner) -->
-<div class="admin-bar">
-  🌸 Административен панел
-  <a href="#admin">Управление на продукти</a>
-  <a href="#orders">Поръчки</a>
-  <a href="#stock">Склад</a>
-</div>
-
 <!-- Top promo bar -->
 <div class="top-bar">
-  🌸 Безплатна доставка при поръчка над 50 евро &nbsp;|&nbsp; Доставка с Еконт &nbsp;|&nbsp; Наложен платеж
+  🌸 Безплатна доставка при поръчка над 15 евро &nbsp;|&nbsp; Доставка с Еконт &nbsp;|&nbsp; Наложен платеж
 </div>
 
 <!-- Header -->
@@ -733,7 +726,7 @@
     <div class="brand-text">
       <h1>Роза-Мимоза магазин</h1>
       <p>Красиви ръчно изработени цветя и декорации за скрапбукинг</p>
-      <div class="floral-div">🌸 🌹 🌸</div>
+
     </div>
   </div>
 
@@ -756,8 +749,7 @@
   <a href="#" onclick="filterCat('gardenii',this)">🤍 Гардении</a>
   <a href="#" onclick="filterCat('koleda',this)">⭐ Коледни звезди</a>
   <a href="#" onclick="filterCat('bozuri',this)">🌸 Божури</a>
-  <a href="#" onclick="filterCat('pelargoniu',this)">🌺 Пеларгониуми</a>
-  <a href="#" onclick="filterCat('lilii',this)">🌷 Лилии</a>
+  <a href="#" onclick="filterCat('pelargoniu',this)">🌺 Обикновени цветя</a>
   <a href="#" onclick="filterCat('malki',this)">🌼 Малки цветя</a>
   <a href="#" onclick="filterCat('kolektsii',this)">💐 Колекции</a>
   <a href="#" onclick="filterCat('spetsialni',this)">✨ Специални</a>
@@ -785,8 +777,8 @@
   <input type="file" id="hero-upload" class="hero-change-input" accept="image/*" onchange="changeHero(event)">
 
   <div class="hero-content">
-    <h2>Ръчно изработени<br><em>цветя от плат</em></h2>
-    <p>Авторски  цветя и декорации за скрапбукинг — уникално и направено с любов</p>
+    <h2>Ръчно изработени<br><em>цветя с душа</em></h2>
+    <p>Авторски тъкани цветя и декорации за скрапбукинг — всяко е уникално и направено с любов</p>
     <button class="hero-btn">Разгледай колекцията</button>
   </div>
 </div>
@@ -797,7 +789,7 @@
     <div class="info-icon">🚚</div>
     <div class="info-text">
       <h5>Доставка с Еконт</h5>
-      <p>Наложен платеж. Само за България. Изпращам до 3 работни дни.</p>
+      <p>Наложен платеж. Само за България. Изпращам до 2 работни дни.</p>
     </div>
   </div>
   <div class="info-item">
@@ -831,8 +823,7 @@
     <div class="cat-pill" onclick="filterCat('gardenii',this)"><span class="emoji">🤍</span> Гардении</div>
     <div class="cat-pill" onclick="filterCat('koleda',this)"><span class="emoji">⭐</span> Коледни звезди</div>
     <div class="cat-pill" onclick="filterCat('bozuri',this)"><span class="emoji">🌸</span> Божури</div>
-    <div class="cat-pill" onclick="filterCat('pelargoniu',this)"><span class="emoji">🌺</span> Пеларгониуми</div>
-    <div class="cat-pill" onclick="filterCat('lilii',this)"><span class="emoji">🌷</span> Лилии</div>
+    <div class="cat-pill" onclick="filterCat('pelargoniu',this)"><span class="emoji">🌺</span> Обикновени цветя</div>
     <div class="cat-pill" onclick="filterCat('malki',this)"><span class="emoji">🌼</span> Малки цветя</div>
     <div class="cat-pill" onclick="filterCat('kolektsii',this)"><span class="emoji">💐</span> Колекции</div>
     <div class="cat-pill" onclick="filterCat('spetsialni',this)"><span class="emoji">✨</span> Специални</div>
@@ -879,8 +870,7 @@
         <option>Гардении</option>
         <option>Коледни звезди</option>
         <option>Божури</option>
-        <option>Пеларгониуми</option>
-        <option>Лилии</option>
+        <option>Обикновени цветя</option>
         <option>Малки цветя</option>
       </select>
       <textarea id="cf-msg" placeholder="Опишете желаните цветове, размери и брой..."></textarea>
@@ -952,7 +942,6 @@
       <a href="#">🌹 Рози</a>
       <a href="#">🤍 Гардении</a>
       <a href="#">🌸 Божури</a>
-      <a href="#">🌷 Лилии</a>
       <a href="#">💐 Колекции</a>
       <a href="#">✨ Специални</a>
       <a href="#">🍃 Листа</a>
@@ -1008,20 +997,40 @@ const DEFAULT_LEAF = {
 };
 
 function getSizes(p) {
+  const sp = p.sizePrices || {};
+  // За листа
   if(p.priceType === 'leaf') {
-    const sp = p.sizePrices || {};
+    const result = {};
+    if(sp['listo'] > 0)   result['listo']   = { label: 'Листо',   price: sp['listo'] };
+    if(sp['klonche'] > 0) result['klonche'] = { label: 'Клонче',  price: sp['klonche'] };
+    // Ако нищо не е въведено — показваме и двете с default цени
+    if(Object.keys(result).length === 0) {
+      result['listo']   = { label: 'Листо',  price: 0.30 };
+      result['klonche'] = { label: 'Клонче', price: 0.50 };
+    }
+    return result;
+  }
+  // За стандартни размери — показваме само въведените
+  const ALL = {
+    '5cm':   { label: '5 см',  price: sp['5cm'] },
+    '4cm':   { label: '4 см',  price: sp['4cm'] },
+    '3cm':   { label: '3 см',  price: sp['3cm'] },
+    'pupka': { label: 'Пъпка', price: sp['pupka'] },
+  };
+  const result = {};
+  for(const [k, v] of Object.entries(ALL)) {
+    if(v.price && v.price > 0) result[k] = v;
+  }
+  // Ако нищо не е въведено — показваме всички с default цени
+  if(Object.keys(result).length === 0) {
     return {
-      'listo': { label: 'Листо', price: sp['listo'] || 0.30 },
-      'klonche': { label: 'Клонче', price: sp['klonche'] || 0.50 },
+      '5cm':   { label: '5 см',  price: 0.75 },
+      '4cm':   { label: '4 см',  price: 0.60 },
+      '3cm':   { label: '3 см',  price: 0.50 },
+      'pupka': { label: 'Пъпка', price: 0.40 },
     };
   }
-  const sp = p.sizePrices || {};
-  return {
-    '5cm':   { label: '5 см',  price: sp['5cm']   || 0.75 },
-    '4cm':   { label: '4 см',  price: sp['4cm']   || 0.60 },
-    '3cm':   { label: '3 см',  price: sp['3cm']   || 0.50 },
-    'pupka': { label: 'Пъпка', price: sp['pupka'] || 0.40 },
-  };
+  return result;
 }
 
 const PRODUCTS = [
@@ -1061,8 +1070,8 @@ function filterCat(cat, el) {
   if(el) el.classList.add('active');
   const titles = {
     'all':'Всички продукти','rozi':'🌹 Рози','gardenii':'🤍 Гардении',
-    'koleda':'⭐ Коледни звезди','bozuri':'🌸 Божури','pelargoniu':'🌺 Пеларгониуми',
-    'lilii':'🌷 Лилии','malki':'🌼 Малки цветя','kolektsii':'💐 Колекции',
+    'koleda':'⭐ Коледни звезди','bozuri':'🌸 Божури','pelargoniu':'🌺 Обикновени цветя',
+    'malki':'🌼 Малки цветя','kolektsii':'💐 Колекции',
     'spetsialni':'✨ Специални','lista':'🍃 Листа'
   };
   document.getElementById('section-title').textContent = titles[cat] || 'Продукти';
@@ -1147,23 +1156,26 @@ function productCard(p) {
 
 function catName(cat) {
   const m = {'rozi':'Рози','gardenii':'Гардении','koleda':'Коледни звезди',
-    'bozuri':'Божури','pelargoniu':'Пеларгониуми','lilii':'Лилии',
+    'bozuri':'Божури','pelargoniu':'Обикновени цветя',
     'malki':'Малки цветя','kolektsii':'Колекции','spetsialni':'Специални','lista':'Листа'};
   return m[cat] || cat;
 }
 
 function selectSize(id, size, btn) {
+  id = typeof id === 'string' ? parseInt(id) : id;
   selectedSizes[id] = size;
   renderProducts();
 }
 
 function selectColor(id, color, btn) {
+  id = typeof id === 'string' ? parseInt(id) : id;
   selectedColors[id] = color;
   renderProducts();
 }
 
 function addToCart(id) {
-  const p = PRODUCTS.find(x => x.id === id);
+  id = typeof id === 'string' ? parseInt(id) : id;
+  const p = PRODUCTS.find(x => x.id == id);
   const hasSizes = p.sizes || p.priceType === 'leaf';
   const size = hasSizes ? selectedSizes[id] : null;
   const sizes = hasSizes ? getSizes(p) : null;
