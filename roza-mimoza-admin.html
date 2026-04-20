@@ -760,7 +760,7 @@ async function loadAll() {
     if(oRes.error) throw oRes.error;
 
     products = (pRes.data || []).map(p => ({
-      id: p.id, name: p.name, cat: p.cat, emoji: p.emoji || '🌸',
+      id: String(p.id), name: p.name, cat: p.cat, emoji: p.emoji || '🌸',
       priceType: p.price_type, price: p.price, sizePrices: p.size_prices,
       colors: Array.isArray(p.colors) ? p.colors : (typeof p.colors === 'string' && p.colors ? p.colors.replace(/[{}'"]/g,'').split(',').map(c=>c.trim()).filter(Boolean) : []), desc: p.description, material: p.material,
       image: p.image_url, qty: p.qty, minQty: p.min_qty,
@@ -988,8 +988,8 @@ function renderProducts() {
       <td>${stockBadge(p.qty, p.minQty)}</td>
       <td><span class="badge ${p.status==='active'?'badge-ok':'badge-warn'}">${p.status==='active'?'Активен':'Скрит'}</span></td>
       <td style="white-space:nowrap;">
-        <button class="btn btn-outline btn-sm" onclick="editProduct(${Number(p.id)})" style="margin-right:4px;">✏️ Редакция</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteProduct(${Number(p.id)})">🗑 Изтрий</button>
+        <button class="btn btn-outline btn-sm" onclick="editProduct('${p.id}')" style="margin-right:4px;">✏️ Редакция</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑 Изтрий</button>
       </td></tr>`;
   }).join('');
 }
@@ -998,13 +998,13 @@ function filterProducts(v) { productFilter = v; renderProducts(); }
 function filterProductCat(v) { productCatFilter = v; renderProducts(); }
 
 function openProductModal(editId) {
-  const numEditId = editId ? Number(editId) : null;
-  editingProdId = numEditId;
+  const strEditId = editId ? String(editId) : null;
+  editingProdId = strEditId;
   window._pmImageData = null;
   window._pmImageFile = null;
-  document.getElementById('prod-modal-title').textContent = numEditId ? 'Редактиране на продукт' : 'Нов продукт';
-  if(numEditId) {
-    const p = products.find(x => Number(x.id) === numEditId);
+  document.getElementById('prod-modal-title').textContent = strEditId ? 'Редактиране на продукт' : 'Нов продукт';
+  if(strEditId) {
+    const p = products.find(x => String(x.id) === strEditId);
     document.getElementById('pm-name').value = p.name;
     document.getElementById('pm-cat').value = p.cat;
     document.getElementById('pm-emoji').value = p.emoji;
@@ -1041,7 +1041,7 @@ function openProductModal(editId) {
   document.getElementById('product-modal').classList.add('open');
 }
 
-function editProduct(id) { openProductModal(Number(id)); }
+function editProduct(id) { openProductModal(String(id)); }
 
 function togglePriceFields() {
   const type = document.getElementById('pm-price-type').value;
@@ -1106,7 +1106,7 @@ async function saveProduct() {
   if(!name) { alert('Въведете име на продукта.'); return; }
 
   const priceType = document.getElementById('pm-price-type').value;
-  let imageUrl = editingProdId ? (products.find(p=>Number(p.id)===Number(editingProdId))||{}).image : null;
+  let imageUrl = editingProdId ? (products.find(p=>String(p.id)===String(editingProdId))||{}).image : null;
 
   // Качи снимка ако е избрана нова
   if(window._pmImageFile && isConfigured()) {
@@ -1149,9 +1149,9 @@ async function saveProduct() {
 
   if(isConfigured()) {
     if(editingProdId) {
-      const { error } = await sb.from('products').update(dbData).eq('id', Number(editingProdId));
+      const { error } = await sb.from('products').update(dbData).eq('id', editingProdId);
       if(error) { showError('Грешка при запис: ' + error.message); return; }
-      const idx = products.findIndex(p => Number(p.id) === Number(editingProdId));
+      const idx = products.findIndex(p => String(p.id) === String(editingProdId));
       products[idx] = { ...products[idx], name: dbData.name, cat: dbData.cat, emoji: dbData.emoji,
         priceType: dbData.price_type, price: dbData.price, colors, desc: dbData.description,
         material: dbData.material, image: imageUrl, qty: dbData.qty, minQty: dbData.min_qty, status: dbData.status };
@@ -1160,7 +1160,7 @@ async function saveProduct() {
     } else {
       const { data: inserted, error } = await sb.from('products').insert([dbData]).select().single();
       if(error) { showError('Грешка при запис: ' + error.message); return; }
-      products.push({ id: inserted.id, name: inserted.name, cat: inserted.cat, emoji: inserted.emoji,
+      products.push({ id: String(inserted.id), name: inserted.name, cat: inserted.cat, emoji: inserted.emoji,
         priceType: inserted.price_type, price: inserted.price, sizePrices: inserted.size_prices, colors: Array.isArray(inserted.colors) ? inserted.colors : (typeof inserted.colors === 'string' && inserted.colors ? inserted.colors.replace(/[{}'"]/g,'').split(',').map(c=>c.trim()).filter(Boolean) : []),
         desc: inserted.description, material: inserted.material, image: inserted.image_url,
         qty: inserted.qty, minQty: inserted.min_qty, status: inserted.status, special: inserted.is_special });
@@ -1187,15 +1187,15 @@ async function saveProduct() {
 }
 
 async function deleteProduct(id) {
-  const numId = Number(id);
-  const p = products.find(x => Number(x.id) === numId);
-  if(!p) { showError('Продуктът не е намерен.'); return; }
+  const strId = String(id);
+  const p = products.find(x => String(x.id) === strId);
+  if(!p) { showError('Продуктът не е намерен. ID: ' + strId); return; }
   if(!confirm(`Изтриване на "${p.name}"?`)) return;
   if(isConfigured()) {
-    const { error } = await sb.from('products').delete().eq('id', numId);
+    const { error } = await sb.from('products').delete().eq('id', strId);
     if(error) { showError('Грешка при изтриване: ' + error.message); return; }
   }
-  products = products.filter(x => Number(x.id) !== numId);
+  products = products.filter(x => String(x.id) !== strId);
   await loadAll();
 }
 
@@ -1235,13 +1235,13 @@ function filterStock(v) { stockFilter = v; renderStock(); }
 function filterStockCat(v) { stockCatFilter = v; renderStock(); }
 
 async function adjustQty(id, delta) {
-  const p = products.find(x => Number(x.id) === Number(id));
+  const p = products.find(x => String(x.id) === String(id));
   if(!p) return;
   const prev = p.qty;
   p.qty = Math.max(0, p.qty + delta);
   if(p.qty !== prev) {
     if(isConfigured()) {
-      await sb.from('products').update({ qty: p.qty }).eq('id', id);
+      await sb.from('products').update({ qty: p.qty }).eq('id', String(id));
       await sb.from('stock_log').insert([{ product_id: id, product_name: p.name, type: delta>0?'in':'out', quantity: Math.abs(delta), note: `${p.name}: ${delta>0?'+':''}${delta} бр.` }]);
     }
     stockLog.unshift({ type: delta>0?'in':'out', text: `${p.name}: ${delta>0?'+':''}${delta} бр. (${prev} → ${p.qty})`, time: nowStr() });
@@ -1250,13 +1250,13 @@ async function adjustQty(id, delta) {
 }
 
 async function setQty(id, val) {
-  const p = products.find(x => Number(x.id) === Number(id));
+  const p = products.find(x => String(x.id) === String(id));
   if(!p) return;
   const prev = p.qty;
   p.qty = Math.max(0, parseInt(val)||0);
   if(p.qty !== prev) {
     if(isConfigured()) {
-      await sb.from('products').update({ qty: p.qty }).eq('id', id);
+      await sb.from('products').update({ qty: p.qty }).eq('id', String(id));
       await sb.from('stock_log').insert([{ product_id: id, product_name: p.name, type: 'adj', quantity: p.qty, note: `Коригирано от ${prev} на ${p.qty} бр.` }]);
     }
     stockLog.unshift({ type: 'adj', text: `${p.name}: коригирано от ${prev} на ${p.qty} бр.`, time: nowStr() });
@@ -1266,7 +1266,7 @@ async function setQty(id, val) {
 
 async function addNote(id, note) {
   if(!note.trim()) return;
-  const p = products.find(x => Number(x.id) === Number(id));
+  const p = products.find(x => String(x.id) === String(id));
   if(!p) return;
   if(isConfigured()) {
     await sb.from('stock_log').insert([{ product_id: id, product_name: p.name, type: 'adj', quantity: 0, note }]);
@@ -1276,13 +1276,13 @@ async function addNote(id, note) {
 }
 
 async function quickRestock(id) {
-  const p = products.find(x => Number(x.id) === Number(id));
+  const p = products.find(x => String(x.id) === String(id));
   const n = prompt(`Зареждане на "${p.name}". Въведете брой за добавяне:`, '10');
   if(n && parseInt(n) > 0) {
     const add = parseInt(n);
     p.qty += add;
     if(isConfigured()) {
-      await sb.from('products').update({ qty: p.qty }).eq('id', id);
+      await sb.from('products').update({ qty: p.qty }).eq('id', String(id));
       await sb.from('stock_log').insert([{ product_id: id, product_name: p.name, type: 'in', quantity: add, note: `Заприхождаване: +${add} бр.` }]);
     }
     stockLog.unshift({ type: 'in', text: `Заприхождаване: ${p.name} +${add} бр. (общо: ${p.qty})`, time: nowStr() });
