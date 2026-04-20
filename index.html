@@ -164,7 +164,12 @@
     display: flex; align-items: center; justify-content: center;
   }
   .hero-img-container img {
-    width: 100%; height: 100%; object-fit: cover; opacity: 0.6;
+    width: 100%; height: 100%; object-fit: cover; opacity: 1;
+  }
+  .hero-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(61,43,43,0.45) 0%, rgba(61,43,43,0.25) 50%, rgba(61,43,43,0.55) 100%);
+    z-index: 2;
   }
   .hero-change-btn {
     position: absolute; top: 14px; right: 14px;
@@ -184,26 +189,26 @@
   .hero-change-btn:hover { background: #fff; }
   .hero-change-input { display: none; }
   .hero-content {
-    position: relative; z-index: 5;
+    position: relative; z-index: 6;
     text-align: center;
     padding: 40px 20px;
   }
   .hero-content h2 {
     font-family: 'Playfair Display', serif;
     font-size: 42px;
-    color: var(--text-dark);
+    color: #fff;
     line-height: 1.2;
-    text-shadow: 0 1px 8px rgba(255,255,255,0.7);
+    text-shadow: 0 2px 12px rgba(0,0,0,0.5);
     margin-bottom: 12px;
   }
   .hero-content h2 em { color: var(--rose); font-style: italic; }
   .hero-content p {
     font-size: 15px;
-    color: var(--text-mid);
+    color: rgba(255,255,255,0.92);
     max-width: 480px;
     margin: 0 auto 22px;
     font-weight: 300;
-    text-shadow: 0 1px 4px rgba(255,255,255,0.8);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.4);
   }
   .hero-btn {
     background: var(--rose);
@@ -771,6 +776,7 @@
     </svg>
   </div>
 
+  <div class="hero-overlay"></div>
   <label class="hero-change-btn" for="hero-upload">
     📷 Смяна на снимка
   </label>
@@ -1059,9 +1065,9 @@ let selectedColors = {};
 PRODUCTS.forEach(p => {
   if(p.sizes || p.priceType === 'leaf') {
     const sz = getSizes(p);
-    selectedSizes[p.id] = Object.keys(sz)[0];
+    selectedSizes[String(p.id)] = Object.keys(sz)[0];
   }
-  if(p.colors && p.colors.length > 0) selectedColors[p.id] = p.colors[0];
+  if(p.colors && p.colors.length > 0) selectedColors[String(p.id)] = p.colors[0];
 });
 
 function filterCat(cat, el) {
@@ -1089,8 +1095,8 @@ function productCard(p) {
                 p.badge === 'special' ? '<span class="badge-special">СПЕЦИАЛНО</span>' : '';
 
   const imgHtml = p.image
-    ? `<img src="${p.image}" alt="${p.name}" style="width:100%;height:180px;object-fit:cover;">`
-    : `<div class="product-img">${p.emoji}</div>`;
+    ? `<img src="${p.image}" alt="${p.name}" style="width:100%;height:180px;object-fit:cover;cursor:zoom-in;" onclick="openLightbox('${p.image}','${p.name.replace(/'/g,\'\')}')">`
+    : `<div class="product-img" onclick="openLightbox('','${p.name.replace(/'/g,\'\'')}',true)" style="cursor:pointer;">${p.emoji}</div>`;
 
   let sizeHtml = '';
   let priceHtml = '';
@@ -1100,7 +1106,7 @@ function productCard(p) {
     const sel = selectedSizes[p.id] || defaultKey;
     sizeHtml = `<div class="size-selector">
       ${Object.entries(sizes).map(([k,v]) =>
-        `<button class="size-btn${sel===k?' active':''}" onclick="selectSize(${p.id},'${k}',this)">${v.label}</button>`
+        `<button class="size-btn${sel===k?' active':''}" onclick="selectSize('${p.id}','${k}',this)">${v.label}</button>`
       ).join('')}
     </div>`;
     const currentPrice = (sizes[sel] || sizes[defaultKey]).price;
@@ -1118,12 +1124,13 @@ function productCard(p) {
     </div>`;
   } else if(p.colors && p.colors.length > 0) {
     const selColor = selectedColors[p.id] || p.colors[0];
+    const cleanColors = p.colors.map(c => c.replace(/[{}\[\]'"]/g,'').trim()).filter(Boolean);
     colorHtml = `<div style="margin-bottom:10px;">
       <div style="font-size:11px;font-weight:700;color:var(--text-light);margin-bottom:5px;letter-spacing:0.04em;">ЦВЯТ:</div>
       <div style="display:flex;flex-wrap:wrap;gap:5px;">
-        ${p.colors.map(c => `<button
+        ${cleanColors.map(c => `<button
           style="border:1px solid ${c===selColor?'var(--rose)':'var(--rose-light)'};background:${c===selColor?'var(--rose)':'var(--rose-pale)'};color:${c===selColor?'#fff':'var(--text-mid)'};border-radius:16px;padding:4px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;transition:all 0.15s;"
-          onclick="selectColor(${p.id},'${c}',this)">${c}</button>`).join('')}
+          onclick="selectColor('${p.id}','${c}',this)">${c}</button>`).join('')}
       </div>
     </div>`;
   }
@@ -1148,7 +1155,7 @@ function productCard(p) {
       ${sizeHtml}
       <div class="product-footer">
         ${priceHtml}
-        <button class="add-btn" onclick="addToCart(${p.id})">+ Добави</button>
+        <button class="add-btn" onclick="addToCart('${p.id}')">+ Добави</button>
       </div>
     </div>
   </div>`;
@@ -1162,22 +1169,20 @@ function catName(cat) {
 }
 
 function selectSize(id, size, btn) {
-  id = typeof id === 'string' ? parseInt(id) : id;
-  selectedSizes[id] = size;
+  selectedSizes[String(id)] = size;
   renderProducts();
 }
 
 function selectColor(id, color, btn) {
-  id = typeof id === 'string' ? parseInt(id) : id;
-  selectedColors[id] = color;
+  selectedColors[String(id)] = color;
   renderProducts();
 }
 
 function addToCart(id) {
-  id = typeof id === 'string' ? parseInt(id) : id;
-  const p = PRODUCTS.find(x => x.id == id);
+  const strId = String(id);
+  const p = PRODUCTS.find(x => String(x.id) === strId);
   const hasSizes = p.sizes || p.priceType === 'leaf';
-  const size = hasSizes ? selectedSizes[id] : null;
+  const size = hasSizes ? selectedSizes[strId] : null;
   const sizes = hasSizes ? getSizes(p) : null;
   const defaultKey = sizes ? Object.keys(sizes)[0] : null;
   const sizeKey = size || defaultKey;
@@ -1188,7 +1193,7 @@ function addToCart(id) {
     const inp = document.getElementById('color-input-' + id);
     color = inp ? inp.value.trim() : '';
   } else {
-    color = selectedColors[id] || (p.colors && p.colors[0]) || '';
+    color = selectedColors[strId] || (p.colors && p.colors[0]) || '';
   }
   const key = `${id}-${size||'fixed'}-${color}`;
   const existing = cart.find(x => x.key === key);
@@ -1292,13 +1297,30 @@ function sendSpecialOrder() {
 function changeHero(e) {
   const file = e.target.files[0];
   if(!file) return;
-  const url = URL.createObjectURL(file);
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const dataUrl = ev.target.result;
+    applyHeroImage(dataUrl);
+    try { localStorage.setItem('rm_hero_img', dataUrl); } catch(err) {}
+  };
+  reader.readAsDataURL(file);
+}
+function applyHeroImage(dataUrl) {
   const bg = document.getElementById('hero-bg');
-  bg.style.backgroundImage = `url(${url})`;
+  bg.style.backgroundImage = `url(${dataUrl})`;
   bg.style.backgroundSize = 'cover';
   bg.style.backgroundPosition = 'center';
-  bg.innerHTML = '';
+  // Keep overlay, remove old SVG/img children
+  const children = Array.from(bg.children);
+  children.forEach(c => { if(c.tagName !== 'DIV') c.remove(); });
 }
+// Load saved hero image on page load
+(function() {
+  try {
+    const saved = localStorage.getItem('rm_hero_img');
+    if(saved) applyHeroImage(saved);
+  } catch(e) {}
+})();
 
 // ── SUPABASE INIT ─────────────────────────────────────
 let sbShop = null;
@@ -1344,9 +1366,9 @@ async function loadProductsFromDB() {
       PRODUCTS.forEach(p => {
         if(p.sizes || p.priceType === 'leaf') {
           const sz = getSizes(p);
-          selectedSizes[p.id] = Object.keys(sz)[0];
+          selectedSizes[String(p.id)] = Object.keys(sz)[0];
         }
-        if(p.colors && p.colors.length > 0) selectedColors[p.id] = p.colors[0];
+        if(p.colors && p.colors.length > 0) selectedColors[String(p.id)] = p.colors[0];
       });
     }
   } catch(e) {
@@ -1358,6 +1380,16 @@ async function loadProductsFromDB() {
 // Init
 loadProductsFromDB();
 </script>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center;cursor:zoom-out;">
+  <div style="position:relative;max-width:90vw;max-height:90vh;" onclick="event.stopPropagation()">
+    <img id="lightbox-img" src="" alt="" style="max-width:90vw;max-height:85vh;object-fit:contain;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+    <div id="lightbox-title" style="text-align:center;color:#fff;font-family:'Playfair Display',serif;font-size:18px;margin-top:12px;"></div>
+    <button onclick="closeLightbox()" style="position:absolute;top:-16px;right:-16px;background:var(--rose);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>
+</div>
+
 <!-- TERMS MODAL -->
 <div id="terms-overlay" style="display:none;position:fixed;inset:0;background:rgba(60,20,30,0.5);z-index:400;overflow-y:auto;padding:30px 16px;">
   <div style="background:var(--white);border-radius:20px;max-width:720px;margin:0 auto;padding:40px;position:relative;box-shadow:0 12px 48px rgba(100,40,60,0.2);">
@@ -1469,6 +1501,20 @@ loadProductsFromDB();
 </div>
 
 <script>
+function openLightbox(src, title, emoji) {
+  if(!src) return;
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox-title').textContent = title || '';
+  lb.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeLightbox(); });
+
 function showTerms() {
   document.getElementById('terms-overlay').style.display = 'block';
   document.body.style.overflow = 'hidden';
