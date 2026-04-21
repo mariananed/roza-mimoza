@@ -13,10 +13,10 @@ const SUPABASE_KEY = 'sb_publishable_H2XQ9ggJjuoBOiZdrsKG8Q_iBs6fFY_';
 
 // ── EMAILJS ──────────────────────────────────────────
 // emailjs.com → Account → General → Public Key
-window.EMAILJS_PUBLIC_KEY = ''b4a_eX8fx_Vr-0sRL';
+window.EMAILJS_PUBLIC_KEY = 'b4a_eX8fx_Vr-0sRL';
 
 // emailjs.com → Email Services
-window.EMAILJS_SERVICE_ID = ''service_ddlio2r';
+window.EMAILJS_SERVICE_ID = 'service_ddlio2r';
 
 // emailjs.com → Email Templates
-window.EMAILJS_TEMPLATE_ID = ''template_7qyeatg';
+window.EMAILJS_TEMPLATE_ID = 'template_7qyeatg';
