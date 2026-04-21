@@ -1299,9 +1299,8 @@ async function confirmOrder() {
   }
 
   const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
-  const itemsList = cart.map(i => `${i.name}${i.size?' ('+i.size+')':''}${i.color?' - '+i.color:''} x${i.qty} = ${(i.price*i.qty).toFixed(2)}€`).join('
-');
-  const itemsShort = cart.map(i => `${i.name} x${i.qty}`).join(', ');
+  const itemsList = cart.map(i => i.name + (i.size?' ('+i.size+')':'') + (i.color?' - '+i.color:'') + ' x'+i.qty+' = '+(i.price*i.qty).toFixed(2)+' EUR').join('\n');
+  const itemsShort = cart.map(i => i.name + ' x' + i.qty).join(', ');
 
   // Disable button
   const btn = document.querySelector('#order-modal .checkout-btn, #order-modal button[onclick*="confirmOrder"]');
