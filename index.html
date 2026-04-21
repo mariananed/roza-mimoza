@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Роза-Мимоза Магазин</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --rose: #C8748A;
+    --rose-light: #E8B4C0;
+    --rose-pale: #F9EEF1;
+    --peach: #F2A07B;
+    --peach-light: #FDDEC8;
+    --cream: #FDF6EE;
+    --sage: #A8B89A;
+    --sage-light: #D6E5CE;
+    --gold: #C9A96E;
+    --text-dark: #3D2B2B;
+    --text-mid: #7A5C5C;
+    --text-light: #B08080;
+    --white: #FFFFFF;
+    --shadow: rgba(120,60,80,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Lato', sans-serif;
+    background: var(--cream);
+    color: var(--text-dark);
+    overflow-x: hidden;
+  }
+
+  /* ── LOGO SVG ── */
+  .logo-svg { width: 64px; height: 64px; flex-shrink: 0; }
+
+  /* ── TOP BAR ── */
+  .top-bar {
+    background: var(--rose);
+    color: #fff;
+    text-align: center;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    padding: 7px 20px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 300;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--white);
+    border-bottom: 1px solid var(--rose-light);
+    padding: 8px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px var(--shadow);
+  }
+
+  .header-brand { display: flex; align-items: center; gap: 18px; flex: 1; }
+
+  .brand-text h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    color: var(--rose);
+    line-height: 1.2;
+    font-weight: 600;
+  }
+  .brand-text p {
+    font-size: 10px;
+    color: var(--text-light);
+    letter-spacing: 0.05em;
+    font-weight: 300;
+    margin-top: 2px;
+  }
+
+  .header-actions { display: flex; align-items: center; gap: 16px; }
+
+  .search-bar {
+    display: flex;
+    align-items: center;
+    background: var(--rose-pale);
+    border: 1px solid var(--rose-light);
+    border-radius: 24px;
+    padding: 7px 16px;
+    gap: 8px;
+  }
+  .search-bar input {
+    border: none; background: transparent; outline: none;
+    font-size: 13px; color: var(--text-dark); width: 180px;
+    font-family: 'Lato', sans-serif;
+  }
+  .search-bar input::placeholder { color: var(--text-light); }
+
+  .cart-btn {
+    background: var(--rose);
+    color: #fff;
+    border: none;
+    border-radius: 24px;
+    padding: 9px 20px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    transition: background 0.2s;
+  }
+  .cart-btn:hover { background: var(--text-mid); }
+  .cart-count {
+    background: var(--gold);
+    color: #fff;
+    border-radius: 50%;
+    width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+  }
+
+  /* ── NAV ── */
+  nav {
+    background: var(--rose-pale);
+    border-bottom: 1px solid var(--rose-light);
+    padding: 0 40px;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+  }
+  nav a {
+    text-decoration: none;
+    color: var(--text-mid);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 13px 18px;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+    font-family: 'Lato', sans-serif;
+  }
+  nav a:hover, nav a.active {
+    color: var(--rose);
+    border-bottom-color: var(--rose);
+  }
+
+  /* ── HERO BANNER ── */
+  .hero {
+    position: relative;
+    width: 100%;
+    min-height: 340px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hero-img-container {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, #F2C4CC 0%, #F9DEC9 40%, #E8D5C0 70%, #C8A8B8 100%);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hero-img-container img {
+    width: 100%; height: 100%; object-fit: cover; opacity: 1;
+  }
+  .hero-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(61,43,43,0.45) 0%, rgba(61,43,43,0.25) 50%, rgba(61,43,43,0.55) 100%);
+    z-index: 2;
+  }
+
+  .hero-content {
+    position: relative; z-index: 6;
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .hero-content h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    color: #fff;
+    line-height: 1.2;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    margin-bottom: 12px;
+  }
+  .hero-content h2 em { color: var(--rose); font-style: italic; }
+  .hero-content p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.92);
+    max-width: 480px;
+    margin: 0 auto 22px;
+    font-weight: 300;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.4);
+  }
+  .hero-btn {
+    background: var(--rose);
+    color: #fff;
+    border: none;
+    border-radius: 28px;
+    padding: 13px 32px;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    font-family: 'Lato', sans-serif;
+    box-shadow: 0 4px 16px rgba(200,116,138,0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .hero-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(200,116,138,0.45); }
+
+  /* ── SECTIONS ── */
+  .section { padding: 50px 40px; }
+  .section-header {
+    display: flex; align-items: baseline; gap: 16px;
+    margin-bottom: 28px;
+  }
+  .section-header h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    color: var(--text-dark);
+    font-weight: 600;
+  }
+  .section-header .line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--rose-light), transparent);
+  }
+  .section-header a {
+    font-size: 12px;
+    color: var(--rose);
+    text-decoration: none;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── CATEGORY PILLS ── */
+  .categories {
+    background: var(--white);
+    padding: 30px 40px;
+    border-bottom: 1px solid var(--rose-light);
+  }
+  .cat-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .cat-pill {
+    background: var(--rose-pale);
+    border: 1px solid var(--rose-light);
+    border-radius: 28px;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-mid);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 7px;
+    font-family: 'Lato', sans-serif;
+  }
+  .cat-pill:hover, .cat-pill.active {
+    background: var(--rose);
+    color: #fff;
+    border-color: var(--rose);
+  }
+  .cat-pill .emoji { font-size: 16px; }
+
+  /* ── PRODUCT GRID ── */
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 22px;
+  }
+
+  .product-card {
+    background: var(--white);
+    border-radius: 16px;
+    border: 1px solid var(--rose-light);
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+  .product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 28px var(--shadow);
+  }
+
+  .product-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    background: linear-gradient(135deg, var(--rose-pale), var(--peach-light));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 52px;
+  }
+
+  .badge-new {
+    position: absolute; top: 10px; left: 10px;
+    background: var(--rose);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 3px 10px;
+    border-radius: 12px;
+  }
+  .badge-special {
+    position: absolute; top: 10px; left: 10px;
+    background: var(--gold);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 3px 10px;
+    border-radius: 12px;
+  }
+
+  .product-info { padding: 14px 16px 16px; }
+  .product-info .cat-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--rose);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .product-info h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    color: var(--text-dark);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .product-info .size-row {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-bottom: 10px;
+  }
+  .product-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .price {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--rose);
+    font-family: 'Playfair Display', serif;
+  }
+  .price span { font-size: 12px; font-weight: 300; color: var(--text-light); }
+
+  .size-selector {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .size-btn {
+    border: 1px solid var(--rose-light);
+    background: var(--rose-pale);
+    border-radius: 8px;
+    padding: 3px 9px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'Lato', sans-serif;
+    font-weight: 700;
+    color: var(--text-mid);
+    transition: all 0.15s;
+  }
+  .size-btn.active, .size-btn:hover {
+    background: var(--rose);
+    color: #fff;
+    border-color: var(--rose);
+  }
+
+  .add-btn {
+    background: var(--rose);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Lato', sans-serif;
+    transition: background 0.2s;
+  }
+  .add-btn:hover { background: var(--text-mid); }
+
+  /* ── INFO STRIP ── */
+  .info-strip {
+    background: linear-gradient(135deg, var(--rose-pale), var(--peach-light));
+    padding: 30px 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    border-top: 1px solid var(--rose-light);
+    border-bottom: 1px solid var(--rose-light);
+  }
+  .info-item {
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .info-icon {
+    font-size: 28px; flex-shrink: 0; margin-top: 2px;
+  }
+  .info-text h5 {
+    font-size: 13px; font-weight: 700; color: var(--text-dark);
+    margin-bottom: 3px;
+  }
+  .info-text p { font-size: 12px; color: var(--text-mid); line-height: 1.5; }
+
+  /* ── SPECIAL ORDER SECTION ── */
+  .special-section {
+    background: linear-gradient(135deg, #F9EEF1, #FDF6EE);
+    border: 1px solid var(--rose-light);
+    border-radius: 20px;
+    padding: 36px;
+    margin: 0 40px 50px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    align-items: center;
+  }
+  .special-section h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    color: var(--text-dark);
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+  .special-section h3 em { color: var(--rose); font-style: italic; }
+  .special-section p {
+    font-size: 14px;
+    color: var(--text-mid);
+    line-height: 1.7;
+    margin-bottom: 20px;
+    font-weight: 300;
+  }
+  .contact-form { display: flex; flex-direction: column; gap: 12px; }
+  .contact-form input,
+  .contact-form textarea,
+  .contact-form select {
+    border: 1px solid var(--rose-light);
+    background: var(--white);
+    border-radius: 10px;
+    padding: 11px 14px;
+    font-size: 13px;
+    font-family: 'Lato', sans-serif;
+    color: var(--text-dark);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .contact-form input:focus,
+  .contact-form textarea:focus,
+  .contact-form select:focus { border-color: var(--rose); }
+  .contact-form textarea { height: 80px; resize: vertical; }
+  .contact-form button {
+    background: var(--rose);
+    color: #fff;
+    border: none;
+    border-radius: 24px;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Lato', sans-serif;
+    transition: background 0.2s;
+  }
+  .contact-form button:hover { background: var(--text-mid); }
+
+  /* ── CART SIDEBAR ── */
+  .cart-overlay {
+    position: fixed; inset: 0;
+    background: rgba(60,20,30,0.35);
+    z-index: 200;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .cart-overlay.open { display: block; opacity: 1; }
+
+  .cart-sidebar {
+    position: fixed;
+    top: 0; right: -420px; bottom: 0;
+    width: 400px;
+    background: var(--white);
+    z-index: 201;
+    box-shadow: -4px 0 30px rgba(100,40,60,0.15);
+    transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .cart-sidebar.open { right: 0; }
+
+  .cart-header {
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid var(--rose-light);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .cart-header h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px; color: var(--text-dark);
+  }
+  .cart-close {
+    background: none; border: none; cursor: pointer;
+    font-size: 22px; color: var(--text-light);
+    line-height: 1;
+  }
+
+  .cart-items { flex: 1; overflow-y: auto; padding: 16px 24px; }
+  .cart-item {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rose-pale);
+  }
+  .cart-item-icon {
+    width: 54px; height: 54px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--rose-pale), var(--peach-light));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; flex-shrink: 0;
+  }
+  .cart-item-info { flex: 1; }
+  .cart-item-info h5 {
+    font-size: 14px; font-weight: 700; color: var(--text-dark);
+    margin-bottom: 2px;
+  }
+  .cart-item-info p { font-size: 12px; color: var(--text-light); }
+  .cart-item-price { font-size: 15px; font-weight: 700; color: var(--rose); }
+  .cart-item-remove {
+    background: none; border: none; cursor: pointer;
+    font-size: 16px; color: var(--rose-light);
+    transition: color 0.15s;
+  }
+  .cart-item-remove:hover { color: var(--rose); }
+  .cart-qty { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .qty-btn {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 1px solid var(--rose-light);
+    background: var(--rose-pale);
+    cursor: pointer; font-size: 14px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--rose);
+    transition: background 0.15s;
+  }
+  .qty-btn:hover { background: var(--rose-light); }
+  .qty-num { font-size: 13px; font-weight: 700; color: var(--text-dark); min-width: 18px; text-align: center; }
+
+  .cart-footer {
+    padding: 18px 24px 24px;
+    border-top: 1px solid var(--rose-light);
+    background: var(--rose-pale);
+  }
+  .cart-total {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  .cart-total span { font-size: 13px; color: var(--text-mid); font-weight: 700; }
+  .cart-total strong { font-size: 22px; color: var(--rose); font-family: 'Playfair Display', serif; }
+  .checkout-btn {
+    width: 100%;
+    background: var(--rose);
+    color: #fff;
+    border: none;
+    border-radius: 28px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Lato', sans-serif;
+    letter-spacing: 0.04em;
+    transition: background 0.2s;
+  }
+  .checkout-btn:hover { background: var(--text-mid); }
+  .econt-note {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-light);
+    margin-top: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--text-dark);
+    color: var(--rose-pale);
+    padding: 40px;
+    margin-top: 20px;
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 30px;
+  }
+  footer h5 {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    color: var(--rose-light);
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+  footer p, footer a {
+    font-size: 13px;
+    color: var(--text-light);
+    line-height: 1.8;
+    text-decoration: none;
+    display: block;
+  }
+  footer a:hover { color: var(--rose-light); }
+  .footer-bottom {
+    border-top: 1px solid rgba(200,116,138,0.2);
+    padding-top: 20px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-light);
+  }
+
+  /* ── ADMIN NOTICE BADGE ── */
+  .admin-bar {
+    background: #3D2B2B;
+    color: var(--rose-light);
+    text-align: center;
+    font-size: 12px;
+    padding: 6px;
+    letter-spacing: 0.04em;
+  }
+  .admin-bar a {
+    color: var(--gold);
+    text-decoration: none;
+    font-weight: 700;
+    margin-left: 12px;
+  }
+
+  /* decorative floral divider */
+  .floral-div {
+    text-align: center;
+    font-size: 22px;
+    letter-spacing: 10px;
+    margin: 6px 0 0;
+    opacity: 0.5;
+  }
+
+  @media (max-width: 700px) {
+    header { padding: 14px 16px; }
+    nav { padding: 0 16px; }
+    .section { padding: 30px 16px; }
+    .categories { padding: 20px 16px; }
+    .special-section { grid-template-columns: 1fr; margin: 0 16px 30px; }
+    .footer-grid { grid-template-columns: 1fr; gap: 24px; }
+    footer { padding: 30px 16px; }
+    .info-strip { padding: 20px 16px; }
+    .hero-content h2 { font-size: 28px; }
+    .cart-sidebar { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Admin bar (visible only to owner) -->
+<!-- Top promo bar -->
+<div class="top-bar">
+  🌸 Безплатна доставка при поръчка над 15 евро &nbsp;|&nbsp; Доставка с Еконт &nbsp;|&nbsp; Наложен платеж
+</div>
+
+<!-- Header -->
+<header>
+  <div class="header-brand">
+    <!-- LOGO -->
+    <svg class="logo-svg" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="circle-clip">
+          <circle cx="55" cy="55" r="50"/>
+        </clipPath>
+      </defs>
+      <!-- Background circle -->
+      <circle cx="55" cy="55" r="50" fill="#F9EEF1" stroke="#C8748A" stroke-width="2.5"/>
+      <!-- Decorative ring -->
+      <circle cx="55" cy="55" r="44" fill="none" stroke="#E8B4C0" stroke-width="1" stroke-dasharray="4 3"/>
+
+      <!-- Leaves -->
+      <ellipse cx="28" cy="62" rx="9" ry="5" fill="#A8B89A" transform="rotate(-30 28 62)"/>
+      <ellipse cx="82" cy="62" rx="9" ry="5" fill="#A8B89A" transform="rotate(30 82 62)"/>
+      <ellipse cx="34" cy="44" rx="7" ry="4" fill="#A8B89A" transform="rotate(-55 34 44)"/>
+      <ellipse cx="76" cy="44" rx="7" ry="4" fill="#A8B89A" transform="rotate(55 76 44)"/>
+
+      <!-- Central rose -->
+      <circle cx="55" cy="48" r="13" fill="#C8748A" opacity="0.15"/>
+      <ellipse cx="55" cy="41" rx="7" ry="5" fill="#C8748A"/>
+      <ellipse cx="62" cy="47" rx="7" ry="5" fill="#D4849A" transform="rotate(72 62 47)"/>
+      <ellipse cx="59" cy="55" rx="7" ry="5" fill="#C8748A" transform="rotate(144 59 55)"/>
+      <ellipse cx="51" cy="55" rx="7" ry="5" fill="#D4849A" transform="rotate(216 51 55)"/>
+      <ellipse cx="48" cy="47" rx="7" ry="5" fill="#C8748A" transform="rotate(288 48 47)"/>
+      <circle cx="55" cy="48" r="4" fill="#E8B4C0"/>
+
+      <!-- Small side roses -->
+      <ellipse cx="30" cy="52" rx="5" ry="3.5" fill="#D4849A"/>
+      <ellipse cx="30" cy="52" rx="3" ry="2" fill="#E8B4C0" transform="rotate(45 30 52)"/>
+      <ellipse cx="80" cy="52" rx="5" ry="3.5" fill="#D4849A"/>
+      <ellipse cx="80" cy="52" rx="3" ry="2" fill="#E8B4C0" transform="rotate(-45 80 52)"/>
+
+      <!-- Text arc — brand name -->
+      <path id="top-arc" d="M 18,55 A 37,37 0 0,1 92,55" fill="none"/>
+      <text font-family="'Playfair Display', serif" font-size="9" font-weight="600" fill="#3D2B2B">
+        <textPath href="#top-arc" startOffset="10%">Роза-Мимоза</textPath>
+      </text>
+
+      <path id="bottom-arc" d="M 20,60 A 35,35 0 0,0 90,60" fill="none"/>
+      <text font-family="'Lato', sans-serif" font-size="6.5" fill="#7A5C5C">
+        <textPath href="#bottom-arc" startOffset="5%">Авторски цветя от плат</textPath>
+      </text>
+    </svg>
+
+    <div class="brand-text">
+      <h1>Роза-Мимоза магазин</h1>
+      <p>Красиви ръчно изработени цветя и декорации за скрапбукинг</p>
+
+    </div>
+  </div>
+
+  <div class="header-actions">
+    <div class="search-bar">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="#B08080" stroke-width="1.5"/><line x1="9.5" y1="9.5" x2="12.5" y2="12.5" stroke="#B08080" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <input type="text" id="search-input" placeholder="Търсене на цветя..." oninput="searchProducts(this.value)">
+    </div>
+    <button class="cart-btn" onclick="toggleCart()">
+      🛒 Количка
+      <span class="cart-count" id="cart-count">0</span>
+    </button>
+  </div>
+</header>
+
+<!-- Navigation -->
+<nav>
+  <a href="#" class="active" onclick="filterCat('all',this)">Всички</a>
+  <a href="#" onclick="filterCat('rozi',this)">🌹 Рози</a>
+  <a href="#" onclick="filterCat('gardenii',this)">🤍 Гардении</a>
+  <a href="#" onclick="filterCat('koleda',this)">⭐ Коледни звезди</a>
+  <a href="#" onclick="filterCat('bozuri',this)">🌸 Божури</a>
+  <a href="#" onclick="filterCat('pelargoniu',this)">🌺 Обикновени цветя</a>
+  <a href="#" onclick="filterCat('malki',this)">🌼 Малки цветя</a>
+  <a href="#" onclick="filterCat('kolektsii',this)">💐 Колекции</a>
+  <a href="#" onclick="filterCat('spetsialni',this)">✨ Специални</a>
+  <a href="#" onclick="filterCat('lista',this)">🍃 Листа</a>
+</nav>
+
+<!-- Hero Banner -->
+<div class="hero">
+  <div class="hero-img-container" id="hero-bg">
+    <!-- Decorative SVG background if no photo -->
+    <svg width="100%" height="100%" viewBox="0 0 1200 340" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;opacity:0.25">
+      <circle cx="100" cy="80" r="60" fill="#C8748A" opacity="0.3"/>
+      <circle cx="300" cy="200" r="40" fill="#F2A07B" opacity="0.3"/>
+      <circle cx="600" cy="50" r="80" fill="#E8B4C0" opacity="0.25"/>
+      <circle cx="900" cy="150" r="55" fill="#C8748A" opacity="0.2"/>
+      <circle cx="1100" cy="60" r="45" fill="#A8B89A" opacity="0.25"/>
+      <circle cx="200" cy="300" r="35" fill="#E8B4C0" opacity="0.3"/>
+      <circle cx="800" cy="300" r="50" fill="#F2A07B" opacity="0.2"/>
+    </svg>
+  </div>
+
+  <div class="hero-overlay"></div>
+
+
+  <div class="hero-content">
+    <h2 style="color:#fff;text-shadow:0 2px 16px rgba(0,0,0,0.6);font-size:44px;font-weight:700;">Уникални авторски цветя от плат</h2>
+    <p style="color:rgba(255,255,255,0.95);text-shadow:0 1px 8px rgba(0,0,0,0.5);font-size:17px;font-weight:600;">Създадени с прецизна ръчна изработка, за да вдъхнат автентичен стил и неповторимост на всяка ваша творческа идея</p>
+    <button class="hero-btn" onclick="document.getElementById('products-section').scrollIntoView({behavior:'smooth'})">Разгледай колекцията</button>
+  </div>
+</div>
+
+<!-- Info Strip -->
+<div class="info-strip">
+  <div class="info-item">
+    <div class="info-icon">🚚</div>
+    <div class="info-text">
+      <h5>Доставка с Еконт</h5>
+      <p>Наложен платеж. Само за България. Изпращам до 2 работни дни.</p>
+    </div>
+  </div>
+  <div class="info-item">
+    <div class="info-icon">🌸</div>
+    <div class="info-text">
+      <h5>Ръчно изработено</h5>
+      <p>Всяко цвете е авторско и направено с внимание към детайла.</p>
+    </div>
+  </div>
+  <div class="info-item">
+    <div class="info-icon">✉️</div>
+    <div class="info-text">
+      <h5>Поръчки по желание</h5>
+      <p>Специални цветя с оцветяване и размер по ваш избор.</p>
+    </div>
+  </div>
+  <div class="info-item">
+    <div class="info-icon">💌</div>
+    <div class="info-text">
+      <h5>Потвърждение на поръчка</h5>
+      <p>Получавате имейл веднага след потвърждение на поръчката.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Categories -->
+<div class="categories">
+  <div class="cat-grid">
+    <div class="cat-pill active" onclick="filterCat('all',this)"><span class="emoji">🌺</span> Всички</div>
+    <div class="cat-pill" onclick="filterCat('rozi',this)"><span class="emoji">🌹</span> Рози</div>
+    <div class="cat-pill" onclick="filterCat('gardenii',this)"><span class="emoji">🤍</span> Гардении</div>
+    <div class="cat-pill" onclick="filterCat('koleda',this)"><span class="emoji">⭐</span> Коледни звезди</div>
+    <div class="cat-pill" onclick="filterCat('bozuri',this)"><span class="emoji">🌸</span> Божури</div>
+    <div class="cat-pill" onclick="filterCat('pelargoniu',this)"><span class="emoji">🌺</span> Обикновени цветя</div>
+    <div class="cat-pill" onclick="filterCat('malki',this)"><span class="emoji">🌼</span> Малки цветя</div>
+    <div class="cat-pill" onclick="filterCat('kolektsii',this)"><span class="emoji">💐</span> Колекции</div>
+    <div class="cat-pill" onclick="filterCat('spetsialni',this)"><span class="emoji">✨</span> Специални</div>
+    <div class="cat-pill" onclick="filterCat('lista',this)"><span class="emoji">🍃</span> Листа</div>
+  </div>
+</div>
+
+<!-- Products Section -->
+<div class="section" id="products-section">
+  <div class="section-header">
+    <h3 id="section-title">Всички продукти</h3>
+    <div class="line"></div>
+  </div>
+
+  <div class="product-grid" id="product-grid">
+    <!-- Products rendered by JS -->
+  </div>
+</div>
+
+<!-- Special Orders Section -->
+<div class="special-section">
+  <div>
+    <h3>✨ <em>Специални</em> поръчки</h3>
+    <p>Изработвам цветя с допълнително оцветяване, специални модели и размери по ваше желание. Свържете се с мен чрез формата, по имейл или в социалните мрежи.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;">
+      <a href="mailto:mariana99jordan@gmail.com" style="display:flex;align-items:center;gap:10px;background:var(--white);border:1px solid var(--rose-light);border-radius:12px;padding:10px 14px;text-decoration:none;color:var(--text-dark);font-size:13px;font-weight:700;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 2px 10px rgba(200,116,138,0.18)'" onmouseout="this.style.boxShadow=''">
+        <span style="font-size:20px;">✉️</span>
+        <span>mariana99jordan@gmail.com<br><span style="font-weight:300;color:var(--text-light);font-size:11px;">Пишете ни по имейл</span></span>
+      </a>
+      <a href="https://www.facebook.com/share/1GTHzsR8YT/" target="_blank" style="display:flex;align-items:center;gap:10px;background:var(--white);border:1px solid var(--rose-light);border-radius:12px;padding:10px 14px;text-decoration:none;color:var(--text-dark);font-size:13px;font-weight:700;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 2px 10px rgba(200,116,138,0.18)'" onmouseout="this.style.boxShadow=''">
+        <span style="font-size:20px;color:#1877F2;">f</span>
+        <span>Роза-Мимоза магазин<br><span style="font-weight:300;color:var(--text-light);font-size:11px;">Намерете ни във Facebook</span></span>
+      </a>
+    </div>
+  </div>
+  <div>
+    <div class="contact-form">
+      <input type="text" id="cf-name" placeholder="Вашето име *">
+      <input type="email" id="cf-email" placeholder="Имейл адрес *">
+      <input type="tel" id="cf-phone" placeholder="Телефон (Viber/WhatsApp)">
+      <select id="cf-cat">
+        <option value="">— Категория цвете —</option>
+        <option>Рози</option>
+        <option>Гардении</option>
+        <option>Коледни звезди</option>
+        <option>Божури</option>
+        <option>Обикновени цветя</option>
+        <option>Малки цветя</option>
+      </select>
+      <textarea id="cf-msg" placeholder="Опишете желаните цветове, размери и брой..."></textarea>
+      <button onclick="sendSpecialOrder()">Изпрати запитване 🌸</button>
+    </div>
+    <div id="cf-confirm" style="display:none;background:var(--sage-light);border:1px solid var(--sage);border-radius:12px;padding:16px;text-align:center;margin-top:12px;">
+      <div style="font-size:28px;margin-bottom:8px;">🌸</div>
+      <p style="font-weight:700;color:var(--text-dark);font-size:14px;">Запитването е изпратено!</p>
+      <p style="font-size:12px;color:var(--text-mid);margin-top:4px;">Ще получите потвърждение на имейла си и ще се свържем с вас скоро.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Checkout / Order Confirmation Modal -->
+<div id="order-modal" style="display:none;position:fixed;inset:0;background:rgba(60,20,30,0.45);z-index:300;align-items:center;justify-content:center;">
+  <div style="background:var(--white);border-radius:20px;padding:36px;max-width:440px;width:90%;position:relative;box-shadow:0 12px 48px rgba(100,40,60,0.22);">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:48px;">🌸</div>
+      <h3 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--text-dark);margin:10px 0 6px;">Завърши поръчката</h3>
+      <p style="font-size:13px;color:var(--text-light);">Доставка с Еконт — наложен платеж</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <input type="text" id="ord-name" placeholder="Три имена *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
+      <input type="email" id="ord-email" placeholder="Имейл за потвърждение *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
+      <input type="tel" id="ord-phone" placeholder="Телефон *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
+      <input type="text" id="ord-city" placeholder="Град и офис на Еконт *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
+      <textarea id="ord-note" placeholder="Бележка към поръчката (незадължително)" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;height:70px;resize:vertical;"></textarea>
+      <div style="background:var(--rose-pale);border-radius:10px;padding:12px 14px;font-size:13px;border:1px solid var(--rose-light);">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="color:var(--text-mid);">Сума:</span><strong id="modal-total" style="color:var(--rose);">0.00 €</strong></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-mid);">Доставка:</span><span style="color:var(--text-mid);font-size:12px;">Наложен платеж (Еконт)</span></div>
+      </div>
+      <button onclick="confirmOrder()" style="background:var(--rose);color:#fff;border:none;border-radius:24px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;transition:background 0.2s;" onmouseover="this.style.background='var(--text-mid)'" onmouseout="this.style.background='var(--rose)'">✅ Потвърди поръчката</button>
+      <button onclick="closeModal()" style="background:none;border:1px solid var(--rose-light);border-radius:24px;padding:10px;font-size:13px;color:var(--text-light);cursor:pointer;font-family:'Lato',sans-serif;">Назад към количката</button>
+    </div>
+  </div>
+</div>
+
+<!-- Order Success Modal -->
+<div id="success-modal" style="display:none;position:fixed;inset:0;background:rgba(60,20,30,0.45);z-index:300;align-items:center;justify-content:center;">
+  <div style="background:var(--white);border-radius:20px;padding:40px;max-width:420px;width:90%;text-align:center;box-shadow:0 12px 48px rgba(100,40,60,0.22);">
+    <div style="font-size:56px;margin-bottom:16px;">🌹</div>
+    <h3 style="font-family:'Playfair Display',serif;font-size:24px;color:var(--text-dark);margin-bottom:10px;">Благодарим за поръчката!</h3>
+    <p style="font-size:14px;color:var(--text-mid);line-height:1.7;margin-bottom:8px;">Изпратихме потвърждение на вашия <strong>имейл</strong>.</p>
+    <p style="font-size:13px;color:var(--text-mid);line-height:1.7;margin-bottom:20px;">Поръчката ще бъде изпратена с <strong>Еконт</strong> до 2 работни дни. Плащате при получаване — наложен платеж.</p>
+    <div style="background:var(--rose-pale);border-radius:12px;padding:14px;font-size:12px;color:var(--text-mid);margin-bottom:20px;border:1px solid var(--rose-light);">
+      📬 Проверете имейла си за детайлите на поръчката.<br>Ако не намерите писмото, проверете папка <em>Спам</em>.
+    </div>
+    <button onclick="document.getElementById('success-modal').style.display='none'" style="background:var(--rose);color:#fff;border:none;border-radius:24px;padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;">Продължи пазаруването 🌸</button>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <h5>Роза-Мимоза магазин</h5>
+      <p>Авторски ръчно изработени тъкани цветя и декорации за скрапбукинг. Всяко цвете е уникално и направено с любов и внимание.</p>
+      <p style="margin-top:14px;font-size:13px;color:var(--rose-light);font-weight:700;">Последвайте ни:</p>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <a href="https://www.facebook.com/share/1GTHzsR8YT/" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.08);border:1px solid rgba(232,180,192,0.3);border-radius:20px;padding:6px 14px;text-decoration:none;color:var(--rose-light);font-size:12px;font-weight:700;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+          <span style="font-size:14px;color:#8ab4f8;">f</span> Facebook
+        </a>
+      </div>
+      <p style="margin-top:14px;font-size:13px;">✉️ <a href="mailto:mariana99jordan@gmail.com" style="color:var(--rose-light);text-decoration:none;">mariana99jordan@gmail.com</a></p>
+      <p style="margin-top:6px;color:#E8B4C0;font-size:20px;letter-spacing:6px;">🌸 🌹 🍃</p>
+    </div>
+    <div>
+      <h5>Категории</h5>
+      <a href="#">🌹 Рози</a>
+      <a href="#">🤍 Гардении</a>
+      <a href="#">🌸 Божури</a>
+      <a href="#">💐 Колекции</a>
+      <a href="#">✨ Специални</a>
+      <a href="#">🍃 Листа</a>
+    </div>
+    <div>
+      <h5>Информация</h5>
+      <a href="#" onclick="showTerms();return false;">Доставка и плащане</a>
+      <a href="#" onclick="showTerms();return false;">Как да поръчате</a>
+      <a href="#" onclick="showTerms();return false;">Общи условия и сигурност</a>
+      <a href="#" onclick="showTerms();return false;">Контакти</a>
+      <p style="margin-top:14px;">📦 Еконт — наложен платеж</p>
+      <p>🇧🇬 Само за България</p>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    © 2025 Роза-Мимоза магазин. Всички права запазени. &nbsp;|&nbsp; Ръчно изработено с ❤️ в България &nbsp;|&nbsp;
+    <a href="#" onclick="showTerms();return false;" style="color:var(--text-light);text-decoration:underline;">Общи условия</a>
+  </div>
+</footer>
+
+<!-- Cart Sidebar -->
+<div class="cart-overlay" id="cart-overlay" onclick="toggleCart()"></div>
+<div class="cart-sidebar" id="cart-sidebar">
+  <div class="cart-header">
+    <h3>🛒 Количка</h3>
+    <button class="cart-close" onclick="toggleCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cart-items">
+    <p style="color:var(--text-light);font-size:14px;text-align:center;margin-top:40px;">Количката е празна 🌸</p>
+  </div>
+  <div class="cart-footer">
+    <div class="cart-total">
+      <span>Общо:</span>
+      <strong id="cart-total">0.00 €</strong>
+    </div>
+    <button class="checkout-btn" onclick="checkout()">Към поръчката →</button>
+    <div class="econt-note">📦 Доставка с Еконт &nbsp;·&nbsp; Наложен платеж</div>
+  </div>
+</div>
+
+<script src="supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+const DEFAULT_SIZES = {
+  '5cm': { label: '5 см', price: 0.75 },
+  '4cm': { label: '4 см', price: 0.60 },
+  '3cm': { label: '3 см', price: 0.50 },
+  'pupka': { label: 'Пъпка', price: 0.40 }
+};
+const DEFAULT_LEAF = {
+  'listo': { label: 'Листо', price: 0.30 },
+  'klonche': { label: 'Клонче', price: 0.50 }
+};
+
+function getSizes(p) {
+  const sp = p.sizePrices || {};
+  // За листа
+  if(p.priceType === 'leaf') {
+    const result = {};
+    if(sp['listo'] > 0)   result['listo']   = { label: 'Листо',   price: sp['listo'] };
+    if(sp['klonche'] > 0) result['klonche'] = { label: 'Клонче',  price: sp['klonche'] };
+    // Ако нищо не е въведено — показваме и двете с default цени
+    if(Object.keys(result).length === 0) {
+      result['listo']   = { label: 'Листо',  price: 0.30 };
+      result['klonche'] = { label: 'Клонче', price: 0.50 };
+    }
+    return result;
+  }
+  // За стандартни размери — показваме само въведените
+  const ALL = {
+    '5cm':   { label: '5 см',  price: sp['5cm'] },
+    '4cm':   { label: '4 см',  price: sp['4cm'] },
+    '3cm':   { label: '3 см',  price: sp['3cm'] },
+    'pupka': { label: 'Пъпка', price: sp['pupka'] },
+  };
+  const result = {};
+  for(const [k, v] of Object.entries(ALL)) {
+    if(v.price && v.price > 0) result[k] = v;
+  }
+  // Ако нищо не е въведено — показваме всички с default цени
+  if(Object.keys(result).length === 0) {
+    return {
+      '5cm':   { label: '5 см',  price: 0.75 },
+      '4cm':   { label: '4 см',  price: 0.60 },
+      '3cm':   { label: '3 см',  price: 0.50 },
+      'pupka': { label: 'Пъпка', price: 0.40 },
+    };
+  }
+  return result;
+}
+
+const PRODUCTS = [
+  { id:1, name:'Роза класическа', cat:'rozi', emoji:'🌹', sizes:true, badge:'new', colors:['Червено','Розово','Бяло','Праскова'], desc:'Ръчно изработена класическа роза от памучен плат. Перфектна за скрапбукинг, картички и декорации.', material:'Памучен плат' },
+  { id:2, name:'Роза чайна', cat:'rozi', emoji:'🌹', sizes:true, colors:['Праскова','Крем','Жълто','Розово'], desc:'Деликатна чайна роза с многолистни венчелистчета. Изработена ръчно с внимание към всеки детайл.', material:'Памучен плат' },
+  { id:3, name:'Роза миниатюрна', cat:'rozi', emoji:'🌹', sizes:true, colors:['Бяло','Розово','Червено'], desc:'Малка изящна роза, идеална за финни скрапбукинг проекти и картички.', material:'Памучен плат' },
+  { id:4, name:'Гардения', cat:'gardenii', emoji:'🤍', sizes:true, colors:['Бяло','Крем','Розово'], desc:'Нежна гардения с реалистични венчелистчета. Символ на чистота и елегантност.', material:'Сатен / памук' },
+  { id:5, name:'Гардения двойна', cat:'gardenii', emoji:'🤍', sizes:true, badge:'new', colors:['Бяло','Крем'], desc:'Двойна гардения с по-пухкав изглед — два реда венчелистчета за по-богат ефект.', material:'Сатен' },
+  { id:6, name:'Коледна звезда', cat:'koleda', emoji:'⭐', sizes:true, colors:['Червено','Бяло','Злато','Зелено'], desc:'Коледна звезда за празнични скрапбукинг проекти, картички и декорации.', material:'Памук / органза' },
+  { id:7, name:'Божур пухкав', cat:'bozuri', emoji:'🌸', sizes:true, colors:['Розово','Лилаво','Бяло','Праскова','Червено'], desc:'Пищен пухкав божур с много венчелистчета. Великолепен акцент за всеки проект.', material:'Памучен плат' },
+  { id:8, name:'Пеларгониум', cat:'pelargoniu', emoji:'🌺', sizes:true, colors:['Червено','Розово','Бяло','Лилаво'], desc:'Изящен пеларгониум, наподобяващ естествения цвят. Ръчно изработен с прецизност.', material:'Памук' },
+  { id:9, name:'Лилия', cat:'lilii', emoji:'🌷', sizes:true, colors:['Бяло','Розово','Жълто','Оранжево'], desc:'Елегантна лилия с характерните издължени венчелистчета. Подходяща за различни поводи.', material:'Сатен / памук' },
+  { id:10, name:'Малко цвете', cat:'malki', emoji:'🌼', sizes:true, colors:['Розово','Жълто','Синьо','Лилаво','Бяло','Червено','Оранжево'], desc:'Малки декоративни цветчета — идеални за запълване и акценти в скрапбукинг проекти.', material:'Памук' },
+  { id:11, name:'Пролетна колекция', cat:'kolektsii', emoji:'💐', sizes:false, price:4.50, colors:[], desc:'Комплект от 5 различни пролетни цвята в топли пастелни тонове. Готов за директна употреба.', material:'Смесени материали', badge:'new' },
+  { id:12, name:'Коледна колекция', cat:'kolektsii', emoji:'🎄', sizes:false, price:6.00, colors:[], desc:'Празничен комплект с коледни цветя в класическо червено, зелено и злато.', material:'Смесени материали' },
+  { id:13, name:'Специална роза', cat:'spetsialni', emoji:'✨', sizes:true, badge:'special', colors:[], desc:'Роза с допълнително оцветяване и декорации по ваше желание. Уникална авторска изработка.', material:'Памук + декорации', special:true },
+  { id:14, name:'Листо единично', cat:'lista', emoji:'🍃', sizes:false, price:0.30, colors:['Зелено','Есенно','Тъмнозелено'], desc:'Реалистично тъкано листо — перфектен акцент към всяко цвете.', material:'Памук' },
+  { id:15, name:'Клонче листа', cat:'lista', emoji:'🌿', sizes:false, price:0.50, colors:['Зелено','Есенно'], desc:'Клонче с няколко листа — добавя естественост и обем към декорациите.', material:'Памук' },
+];
+
+let cart = [];
+let currentCat = 'all';
+let selectedSizes = {};
+let selectedColors = {};
+
+PRODUCTS.forEach(p => {
+  if(p.sizes || p.priceType === 'leaf') {
+    const sz = getSizes(p);
+    selectedSizes[String(p.id)] = Object.keys(sz)[0];
+  }
+  if(p.colors && p.colors.length > 0) selectedColors[String(p.id)] = p.colors[0];
+});
+
+function searchProducts(query) {
+  const q = query.toLowerCase().trim();
+  const grid = document.getElementById('product-grid');
+  const filtered = PRODUCTS.filter(p => {
+    if(currentCat !== 'all' && p.cat !== currentCat) return false;
+    if(!q) return true;
+    return p.name.toLowerCase().includes(q) ||
+           (p.desc && p.desc.toLowerCase().includes(q)) ||
+           (p.colors && p.colors.some(c => c.toLowerCase().includes(q))) ||
+           catName(p.cat).toLowerCase().includes(q);
+  });
+  if(!q) { renderProducts(); return; }
+  grid.innerHTML = filtered.length
+    ? filtered.map(p => productCard(p)).join('')
+    : `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-light);font-size:14px;">🌸 Няма намерени продукти за "${query}"</div>`;
+}
+
+function filterCat(cat, el) {
+  currentCat = cat;
+  document.querySelectorAll('nav a, .cat-pill').forEach(e => e.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const titles = {
+    'all':'Всички продукти','rozi':'🌹 Рози','gardenii':'🤍 Гардении',
+    'koleda':'⭐ Коледни звезди','bozuri':'🌸 Божури','pelargoniu':'🌺 Обикновени цветя',
+    'malki':'🌼 Малки цветя','kolektsii':'💐 Колекции',
+    'spetsialni':'✨ Специални','lista':'🍃 Листа'
+  };
+  document.getElementById('section-title').textContent = titles[cat] || 'Продукти';
+  renderProducts();
+}
+
+function renderProducts() {
+  const grid = document.getElementById('product-grid');
+  const filtered = currentCat === 'all' ? PRODUCTS : PRODUCTS.filter(p => p.cat === currentCat);
+  grid.innerHTML = filtered.map(p => productCard(p)).join('');
+}
+
+function productCard(p) {
+  const badge = p.badge === 'new' ? '<span class="badge-new">НОВО</span>' :
+                p.badge === 'special' ? '<span class="badge-special">СПЕЦИАЛНО</span>' : '';
+
+  const safeName = p.name.replace(/'/g, "&#39;");
+  const imgHtml = p.image
+    ? `<img src="${p.image}" alt="${p.name}" style="width:100%;height:180px;object-fit:cover;cursor:zoom-in;" onclick="openLightbox(this.src,'${safeName}')">`
+    : `<div class="product-img" style="cursor:default;">${p.emoji}</div>`;
+
+  let sizeHtml = '';
+  let priceHtml = '';
+  if(p.sizes || p.priceType === 'leaf') {
+    const sizes = getSizes(p);
+    const defaultKey = Object.keys(sizes)[0];
+    const sel = selectedSizes[p.id] || defaultKey;
+    sizeHtml = `<div class="size-selector">
+      ${Object.entries(sizes).map(([k,v]) =>
+        `<button class="size-btn${sel===k?' active':''}" onclick="selectSize('${p.id}','${k}',this)">${v.label}</button>`
+      ).join('')}
+    </div>`;
+    const currentPrice = (sizes[sel] || sizes[defaultKey]).price;
+    priceHtml = `<div class="price">${currentPrice.toFixed(2)} €<span>/бр.</span></div>`;
+  } else {
+    priceHtml = `<div class="price">${(p.price||0).toFixed(2)} €<span>/бр.</span></div>`;
+  }
+
+  let colorHtml = '';
+  if(p.special) {
+    colorHtml = `<div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-light);margin-bottom:5px;letter-spacing:0.04em;">ЖЕЛАН ЦВЯТ:</div>
+      <input type="text" placeholder="Опишете желания цвят..." id="color-input-${p.id}"
+        style="width:100%;border:1px solid var(--rose-light);border-radius:8px;padding:7px 10px;font-size:12px;font-family:'Lato',sans-serif;color:var(--text-dark);outline:none;background:var(--rose-pale);">
+    </div>`;
+  } else if(p.colors && p.colors.length > 0) {
+    const selColor = selectedColors[p.id] || p.colors[0];
+    const cleanColors = p.colors.map(c => c.replace(/[{}\[\]'"]/g,'').trim()).filter(Boolean);
+    colorHtml = `<div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-light);margin-bottom:5px;letter-spacing:0.04em;">ЦВЯТ:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;">
+        ${cleanColors.map(c => `<button
+          style="border:1px solid ${c===selColor?'var(--rose)':'var(--rose-light)'};background:${c===selColor?'var(--rose)':'var(--rose-pale)'};color:${c===selColor?'#fff':'var(--text-mid)'};border-radius:16px;padding:4px 11px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;transition:all 0.15s;"
+          onclick="selectColor('${p.id}','${c}',this)">${c}</button>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  const descHtml = p.desc
+    ? `<div style="font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:8px;">${p.desc}</div>`
+    : '';
+  const matHtml = p.material
+    ? `<div style="font-size:11px;color:var(--text-mid);margin-bottom:6px;">&#x1F9F5; ${p.material}</div>`
+    : '';
+
+  // Наличност индикатор
+  const qty = p.qty || 0;
+  let stockHtml = '';
+  if(qty === 0) {
+    stockHtml = `<div style="display:inline-flex;align-items:center;gap:5px;background:#FAECEA;border-radius:10px;padding:3px 10px;font-size:11px;font-weight:700;color:#D85A30;margin-bottom:8px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:#D85A30;display:inline-block;"></span> Изчерпан
+    </div>`;
+  } else if(qty <= 5) {
+    stockHtml = `<div style="display:inline-flex;align-items:center;gap:5px;background:#FFF8E1;border-radius:10px;padding:3px 10px;font-size:11px;font-weight:700;color:#B8860B;margin-bottom:8px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:#C9A96E;display:inline-block;"></span> Остават ${qty} бр.
+    </div>`;
+  } else {
+    stockHtml = `<div style="display:inline-flex;align-items:center;gap:5px;background:#E8F5EE;border-radius:10px;padding:3px 10px;font-size:11px;font-weight:700;color:#2E7D52;margin-bottom:8px;">
+      <span style="width:7px;height:7px;border-radius:50%;background:#3a8f5a;display:inline-block;"></span> В наличност
+    </div>`;
+  }
+
+  // Деактивирай бутона ако е изчерпан
+  const addBtn = qty === 0
+    ? `<button class="add-btn" disabled style="opacity:0.4;cursor:not-allowed;">Изчерпан</button>`
+    : `<button class="add-btn" onclick="addToCart('${p.id}')">+ Добави</button>`;
+
+  return `
+  <div class="product-card" data-cat="${p.cat}">
+    ${badge}
+    ${imgHtml}
+    <div class="product-info">
+      <div class="cat-tag">${catName(p.cat)}</div>
+      <h4>${p.name}</h4>
+      ${descHtml}
+      ${matHtml}
+      ${stockHtml}
+      ${colorHtml}
+      ${sizeHtml}
+      <div class="product-footer">
+        ${priceHtml}
+        ${addBtn}
+      </div>
+    </div>
+  </div>`;
+}
+
+function catName(cat) {
+  const m = {'rozi':'Рози','gardenii':'Гардении','koleda':'Коледни звезди',
+    'bozuri':'Божури','pelargoniu':'Обикновени цветя',
+    'malki':'Малки цветя','kolektsii':'Колекции','spetsialni':'Специални','lista':'Листа'};
+  return m[cat] || cat;
+}
+
+function selectSize(id, size, btn) {
+  selectedSizes[String(id)] = size;
+  renderProducts();
+}
+
+function selectColor(id, color, btn) {
+  selectedColors[String(id)] = color;
+  renderProducts();
+}
+
+function addToCart(id) {
+  const strId = String(id);
+  const p = PRODUCTS.find(x => String(x.id) === strId);
+  const hasSizes = p.sizes || p.priceType === 'leaf';
+  const size = hasSizes ? selectedSizes[strId] : null;
+  const sizes = hasSizes ? getSizes(p) : null;
+  const defaultKey = sizes ? Object.keys(sizes)[0] : null;
+  const sizeKey = size || defaultKey;
+  const price = hasSizes ? (sizes[sizeKey] || sizes[defaultKey]).price : (p.price || 0);
+  const sizeLabel = hasSizes && sizes ? (sizes[sizeKey] || sizes[defaultKey]).label : '';
+  let color = '';
+  if(p.special) {
+    const inp = document.getElementById('color-input-' + id);
+    color = inp ? inp.value.trim() : '';
+  } else {
+    color = selectedColors[strId] || (p.colors && p.colors[0]) || '';
+  }
+  const key = `${id}-${size||'fixed'}-${color}`;
+  const existing = cart.find(x => x.key === key);
+  if(existing) { existing.qty++; }
+  else { cart.push({ key, id, name:p.name, emoji:p.emoji, size:sizeLabel, color, price, qty:1 }); }
+  updateCart();
+  // flash cart button
+  const btn = document.getElementById('cart-count');
+  btn.style.transform = 'scale(1.4)';
+  setTimeout(() => btn.style.transform = '', 200);
+}
+
+function removeFromCart(key) {
+  cart = cart.filter(x => x.key !== key);
+  updateCart();
+}
+function changeQty(key, delta) {
+  const item = cart.find(x => x.key === key);
+  if(!item) return;
+  item.qty += delta;
+  if(item.qty <= 0) cart = cart.filter(x => x.key !== key);
+  updateCart();
+}
+
+function updateCart() {
+  const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
+  document.getElementById('cart-count').textContent = cart.reduce((s,i) => s+i.qty, 0);
+  document.getElementById('cart-total').textContent = total.toFixed(2) + ' €';
+  const el = document.getElementById('cart-items');
+  if(!cart.length) {
+    el.innerHTML = '<p style="color:var(--text-light);font-size:14px;text-align:center;margin-top:40px;">Количката е празна 🌸</p>';
+    return;
+  }
+  el.innerHTML = cart.map(item => `
+    <div class="cart-item">
+      <div class="cart-item-icon">${item.emoji}</div>
+      <div class="cart-item-info">
+        <h5>${item.name}</h5>
+        <p>${[item.size, item.color].filter(Boolean).join(' · ')} · ${item.price.toFixed(2)} € / бр.</p>
+        <div class="cart-qty">
+          <button class="qty-btn" onclick="changeQty('${item.key}',-1)">−</button>
+          <span class="qty-num">${item.qty}</span>
+          <button class="qty-btn" onclick="changeQty('${item.key}',1)">+</button>
+        </div>
+      </div>
+      <div>
+        <div class="cart-item-price">${(item.price*item.qty).toFixed(2)} €</div>
+        <button class="cart-item-remove" onclick="removeFromCart('${item.key}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function toggleCart() {
+  document.getElementById('cart-sidebar').classList.toggle('open');
+  document.getElementById('cart-overlay').classList.toggle('open');
+}
+
+function checkout() {
+  if(!cart.length) { alert('Количката е празна!'); return; }
+  document.getElementById('modal-total').textContent =
+    cart.reduce((s,i) => s + i.price * i.qty, 0).toFixed(2) + ' €';
+  toggleCart();
+  document.getElementById('order-modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('order-modal').style.display = 'none';
+  toggleCart();
+}
+
+async function confirmOrder() {
+  const name = document.getElementById('ord-name').value.trim();
+  const email = document.getElementById('ord-email').value.trim();
+  const phone = document.getElementById('ord-phone').value.trim();
+  const city = document.getElementById('ord-city').value.trim();
+  const note = document.getElementById('ord-note').value.trim();
+  if(!name || !email || !phone || !city) {
+    alert('Моля попълнете всички задължителни полета (*)');
+    return;
+  }
+
+  const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
+  const itemsList = cart.map(i => i.name + (i.size?' ('+i.size+')':'') + (i.color?' - '+i.color:'') + ' x'+i.qty+' = '+(i.price*i.qty).toFixed(2)+' EUR').join('\n');
+  const itemsShort = cart.map(i => i.name + ' x' + i.qty).join(', ');
+
+  // Disable button
+  const btn = document.querySelector('#order-modal .checkout-btn, #order-modal button[onclick*="confirmOrder"]');
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ Изпращане...'; }
+
+  let savedToDb = false;
+  let orderData = {
+    customer_name: name, email, phone, city,
+    items: cart.map(i => ({name:i.name, size:i.size, color:i.color, price:i.price, qty:i.qty})),
+    total: parseFloat(total.toFixed(2)),
+    status: 'pending',
+    note: note || null
+  };
+
+  // 1. Запази в Supabase
+  if(sbShop) {
+    try {
+      const { data, error } = await sbShop.from('orders').insert([orderData]).select().single();
+      if(error) console.error('Supabase грешка:', error.message);
+      else { savedToDb = true; console.log('✅ Поръчка записана в Supabase, ID:', data.id); }
+    } catch(e) { console.error('Supabase exception:', e.message); }
+  }
+
+  // 2. Изпрати имейл с EmailJS
+  if(typeof emailjs !== 'undefined' && window.EMAILJS_PUBLIC_KEY && window.EMAILJS_SERVICE_ID && window.EMAILJS_TEMPLATE_ID) {
+    try {
+      await emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
+        customer_name: name,
+        customer_email: email,
+        customer_phone: phone,
+        customer_city: city,
+        order_items: itemsList,
+        order_total: total.toFixed(2) + ' €',
+        order_note: note || 'Няма',
+      }, window.EMAILJS_PUBLIC_KEY);
+      console.log('✅ Имейл изпратен успешно');
+    } catch(e) { console.error('EmailJS грешка:', e.message); }
+  }
+
+  // 3. Покажи успех
+  document.getElementById('order-modal').style.display = 'none';
+  document.getElementById('success-modal').style.display = 'flex';
+  cart = [];
+  updateCart();
+  if(btn) { btn.disabled = false; btn.textContent = '✅ Потвърди поръчката'; }
+}
+
+function sendSpecialOrder() {
+  const name = document.getElementById('cf-name').value.trim();
+  const email = document.getElementById('cf-email').value.trim();
+  if(!name || !email) { alert('Моля въведете поне вашето име и имейл.'); return; }
+  // In production: send to backend/email service here
+  document.getElementById('cf-confirm').style.display = 'block';
+  document.getElementById('cf-name').value = '';
+  document.getElementById('cf-email').value = '';
+  document.getElementById('cf-phone').value = '';
+  document.getElementById('cf-cat').value = '';
+  document.getElementById('cf-msg').value = '';
+  setTimeout(() => document.getElementById('cf-confirm').style.display = 'none', 5000);
+}
+
+// ── ШАПКА СНИМКА ─────────────────────────────────────
+// Постави URL на снимката тук (от Supabase Storage или друг публичен линк):
+// Например: 'https://xxxxx.supabase.co/storage/v1/object/public/product-images/hero.jpg'
+// Остави '' ако не искаш снимка
+const HERO_IMAGE_URL = '';
+
+function changeHero(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    applyHeroImage(ev.target.result);
+    try { localStorage.setItem('rm_hero_img', ev.target.result); } catch(err) {}
+  };
+  reader.readAsDataURL(file);
+}
+function applyHeroImage(url) {
+  if(!url) return;
+  const bg = document.getElementById('hero-bg');
+  bg.style.backgroundImage = `url(${url})`;
+  bg.style.backgroundSize = 'cover';
+  bg.style.backgroundPosition = 'center';
+  const children = Array.from(bg.children);
+  children.forEach(c => { if(c.tagName !== 'DIV') c.remove(); });
+}
+(function() {
+  // Първо опитай константата в кода
+  if(HERO_IMAGE_URL) { applyHeroImage(HERO_IMAGE_URL); return; }
+  // После опитай localStorage
+  try {
+    const saved = localStorage.getItem('rm_hero_img');
+    if(saved) applyHeroImage(saved);
+  } catch(e) {}
+})();
+
+// ── SUPABASE INIT ─────────────────────────────────────
+let sbShop = null;
+try {
+  if(typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL !== 'POSTAVI_TUK_URL') {
+    sbShop = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+} catch(e) {}
+
+async function loadProductsFromDB() {
+  if(!sbShop) { renderProducts(); return; }
+  try {
+    const { data, error } = await sbShop
+      .from('products')
+      .select('*')
+      .eq('status', 'active')
+      .order('id');
+    if(error) throw error;
+    if(data && data.length > 0) {
+      // Map Supabase fields to local format
+      PRODUCTS.length = 0;
+      data.forEach(p => {
+        PRODUCTS.push({
+          id: p.id,
+          name: p.name,
+          cat: p.cat,
+          emoji: p.emoji || '🌸',
+          sizes: p.price_type === 'sizes',
+          price: p.price,
+          sizePrices: p.size_prices,
+          colors: Array.isArray(p.colors) ? p.colors : (typeof p.colors === 'string' && p.colors ? p.colors.replace(/[{}'\"]/g,'').split(',').map(c=>c.trim()).filter(Boolean) : []),
+          desc: p.description,
+          material: p.material,
+          image: p.image_url,
+          qty: p.qty,
+          minQty: p.min_qty,
+          status: p.status,
+          special: p.is_special,
+          badge: p.badge,
+          priceType: p.price_type,
+        });
+      });
+      PRODUCTS.forEach(p => {
+        if(p.sizes || p.priceType === 'leaf') {
+          const sz = getSizes(p);
+          selectedSizes[String(p.id)] = Object.keys(sz)[0];
+        }
+        if(p.colors && p.colors.length > 0) selectedColors[String(p.id)] = p.colors[0];
+      });
+    }
+  } catch(e) {
+    console.warn('Зареждане от Supabase неуспешно, използвам локални данни:', e.message);
+  }
+  renderProducts();
+}
+
+// Init
+loadProductsFromDB();
+</script>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center;cursor:zoom-out;">
+  <div style="position:relative;max-width:90vw;max-height:90vh;" onclick="event.stopPropagation()">
+    <img id="lightbox-img" src="" alt="" style="max-width:90vw;max-height:85vh;object-fit:contain;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+    <div id="lightbox-title" style="text-align:center;color:#fff;font-family:'Playfair Display',serif;font-size:18px;margin-top:12px;"></div>
+    <button onclick="closeLightbox()" style="position:absolute;top:-16px;right:-16px;background:var(--rose);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>
+</div>
+
+<!-- TERMS MODAL -->
+<div id="terms-overlay" style="display:none;position:fixed;inset:0;background:rgba(60,20,30,0.5);z-index:400;overflow-y:auto;padding:30px 16px;">
+  <div style="background:var(--white);border-radius:20px;max-width:720px;margin:0 auto;padding:40px;position:relative;box-shadow:0 12px 48px rgba(100,40,60,0.2);">
+    <button onclick="closeTerms()" style="position:absolute;top:18px;right:20px;background:none;border:none;font-size:24px;cursor:pointer;color:var(--text-light);">✕</button>
+
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:32px;margin-bottom:8px;">🌸</div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:26px;color:var(--text-dark);margin-bottom:6px;">Общи условия и сигурност</h2>
+      <p style="font-size:13px;color:var(--text-light);">Роза-Мимоза магазин &nbsp;·&nbsp; Актуални към 2025 г.</p>
+    </div>
+
+    <!-- Section helper styles scoped inline -->
+    <style>
+      .terms-section { margin-bottom:28px; }
+      .terms-section h3 { font-family:'Playfair Display',serif; font-size:17px; color:var(--rose); margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--rose-light); }
+      .terms-section p, .terms-section li { font-size:13px; color:var(--text-mid); line-height:1.85; margin-bottom:7px; }
+      .terms-section ul { padding-left:18px; }
+      .terms-section li { margin-bottom:5px; }
+      .terms-highlight { background:var(--rose-pale); border-left:3px solid var(--rose); border-radius:0 8px 8px 0; padding:12px 16px; margin:12px 0; font-size:13px; color:var(--text-dark); line-height:1.7; }
+    </style>
+
+    <div class="terms-section">
+      <h3>1. За нас</h3>
+      <p>Роза-Мимоза магазин е авторски онлайн магазин за ръчно изработени тъкани цветя и декорации за скрапбукинг. Всеки продукт е изработен индивидуално с внимание към детайла.</p>
+      <p>Контакт: <a href="mailto:mariana99jordan@gmail.com" style="color:var(--rose);">mariana99jordan@gmail.com</a> &nbsp;|&nbsp; <a href="https://www.facebook.com/share/1GTHzsR8YT/" target="_blank" style="color:var(--rose);">Facebook страница</a></p>
+    </div>
+
+    <div class="terms-section">
+      <h3>2. Поръчки</h3>
+      <ul>
+        <li>Поръчките се приемат през сайта или директно по имейл и Facebook.</li>
+        <li>След направена поръчка ще получите потвърждение на посочения имейл адрес.</li>
+        <li>При поръчка на продукт от категория „Специални" — ще се свържем с вас за уточнение на детайлите преди изпращане.</li>
+        <li>Запазваме правото да откажем поръчка при изчерпана наличност, като ви уведомяваме незабавно.</li>
+      </ul>
+      <div class="terms-highlight">📌 Всички продукти са ръчно изработени — може да има леки разлики между снимката и готовото изделие, което е характерно за авторската работа.</div>
+    </div>
+
+    <div class="terms-section">
+      <h3>3. Цени и плащане</h3>
+      <ul>
+        <li>Всички цени са посочени в евро (€) и включват ДДС.</li>
+        <li>Плащането се извършва <strong>единствено с наложен платеж</strong> при получаване на пратката от Еконт.</li>
+        <li>Не се приемат банкови преводи или онлайн плащания с карта на този етап.</li>
+        <li>Цените на колекциите и специалните поръчки се договарят индивидуално.</li>
+      </ul>
+      <div class="terms-highlight">💳 Плащате само когато получите пакета — никакъв риск за вас!</div>
+    </div>
+
+    <div class="terms-section">
+      <h3>4. Доставка</h3>
+      <ul>
+        <li>Доставката се осъществява <strong>единствено с куриерска фирма Еконт</strong>.</li>
+        <li>Доставяме само на територията на <strong>Република България</strong>.</li>
+        <li>Таксата за доставка е според тарифата на Еконт и се заплаща при получаване заедно с поръчката.</li>
+        <li>Изпращаме до <strong>2 работни дни</strong> след потвърждение на поръчката.</li>
+        <li>При поръчка на специални изделия срокът се уточнява индивидуално.</li>
+        <li>Можете да получите пратката на адрес или в удобен офис на Еконт.</li>
+      </ul>
+    </div>
+
+    <div class="terms-section">
+      <h3>5. Връщане и рекламации</h3>
+      <ul>
+        <li>Имате право да откажете поръчката при получаване, без да дължите обяснение.</li>
+        <li>При повредена или дефектна стока — свържете се с нас в рамките на <strong>48 часа</strong> след получаване с снимки на проблема.</li>
+        <li>Поради авторския и ръчен характер на продуктите, връщане заради субективно неудовлетворение от цвят или форма не се приема, освен ако стоката е дефектна.</li>
+        <li>При основателна рекламация изпращаме нов продукт или възстановяваме сумата по договореност.</li>
+      </ul>
+    </div>
+
+    <div class="terms-section">
+      <h3>6. Защита на личните данни (GDPR)</h3>
+      <p>Роза-Мимоза магазин спазва Общия регламент за защита на данните (GDPR).</p>
+      <ul>
+        <li>Събираме само данните, необходими за изпълнение на поръчката: имена, телефон, имейл и адрес за доставка.</li>
+        <li>Вашите данни <strong>не се предават на трети страни</strong>, освен на Еконт за целите на доставката.</li>
+        <li>Данните се съхраняват само за срока, необходим за обслужване на поръчката.</li>
+        <li>Имате право да поискате достъп, коригиране или изтриване на вашите данни по всяко време.</li>
+        <li>За въпроси относно личните ви данни: <a href="mailto:mariana99jordan@gmail.com" style="color:var(--rose);">mariana99jordan@gmail.com</a></li>
+      </ul>
+      <div class="terms-highlight">🔒 Вашата поверителност е наш приоритет. Не изпращаме спам и не продаваме данни.</div>
+    </div>
+
+    <div class="terms-section">
+      <h3>7. Сигурност</h3>
+      <ul>
+        <li>Магазинът не съхранява данни за банкови карти — плащането е само с наложен платеж.</li>
+        <li>Комуникацията с клиентите се осъществява само чрез официалния имейл и Facebook страницата.</li>
+        <li>Никога няма да поискаме парола, ПИН код или банкови данни по имейл или телефон.</li>
+      </ul>
+    </div>
+
+    <div class="terms-section">
+      <h3>8. Интелектуална собственост</h3>
+      <p>Всички дизайни, модели и изделия в Роза-Мимоза магазин са авторски и защитени. Забранено е копирането, възпроизвеждането или търговското използване без писмено съгласие.</p>
+    </div>
+
+    <div class="terms-section">
+      <h3>9. Промени в условията</h3>
+      <p>Запазваме правото да актуализираме тези условия. При съществени промени клиентите ще бъдат уведомени по имейл или чрез съобщение на сайта.</p>
+    </div>
+
+    <div style="text-align:center;margin-top:30px;padding-top:20px;border-top:1px solid var(--rose-light);">
+      <p style="font-size:12px;color:var(--text-light);margin-bottom:16px;">Последна актуализация: 2025 г. &nbsp;·&nbsp; Роза-Мимоза магазин</p>
+      <button onclick="closeTerms()" style="background:var(--rose);color:#fff;border:none;border-radius:24px;padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;">Разбрах — затвори ✕</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openLightbox(src, title, emoji) {
+  if(!src) return;
+  const lb = document.getElementById('lightbox');
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox-title').textContent = title || '';
+  lb.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeLightbox(); });
+
+function showTerms() {
+  document.getElementById('terms-overlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+function closeTerms() {
+  document.getElementById('terms-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+document.getElementById('terms-overlay').addEventListener('click', function(e) {
+  if(e.target === this) closeTerms();
+});
+</script>
+
+</body>
+</html>
