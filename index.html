@@ -1151,11 +1151,11 @@ function productCard(p) {
     </div>`;
   } else if(qty <= 5) {
     stockHtml = `<div style="display:inline-flex;align-items:center;gap:5px;background:#FFF8E1;border-radius:10px;padding:3px 10px;font-size:11px;font-weight:700;color:#B8860B;margin-bottom:8px;">
-      <span style="width:7px;height:7px;border-radius:50%;background:#C9A96E;display:inline-block;"></span> Остават ${qty} бр.
+      <span style="width:7px;height:7px;border-radius:50%;background:#C9A96E;display:inline-block;"></span> Налични: ${qty} бр.
     </div>`;
   } else {
     stockHtml = `<div style="display:inline-flex;align-items:center;gap:5px;background:#E8F5EE;border-radius:10px;padding:3px 10px;font-size:11px;font-weight:700;color:#2E7D52;margin-bottom:8px;">
-      <span style="width:7px;height:7px;border-radius:50%;background:#3a8f5a;display:inline-block;"></span> В наличност
+      <span style="width:7px;height:7px;border-radius:50%;background:#3a8f5a;display:inline-block;"></span> Налични: ${qty} бр.
     </div>`;
   }
 
@@ -1320,7 +1320,25 @@ async function confirmOrder() {
     try {
       const { data, error } = await sbShop.from('orders').insert([orderData]).select().single();
       if(error) console.error('Supabase грешка:', error.message);
-      else { savedToDb = true; console.log('✅ Поръчка записана в Supabase, ID:', data.id); }
+      else {
+        savedToDb = true;
+        console.log('Поръчка записана в Supabase, ID:', data.id);
+
+        // Намали наличността за всеки продукт в поръчката
+        for(const item of cart) {
+          const prod = PRODUCTS.find(p => String(p.id) === String(item.id));
+          if(!prod) continue;
+          const newQty = Math.max(0, (prod.qty || 0) - item.qty);
+          const { error: qErr } = await sbShop
+            .from('products')
+            .update({ qty: newQty })
+            .eq('id', item.id);
+          if(!qErr) {
+            prod.qty = newQty;
+            console.log('Наличност намалена:', prod.name, '->', newQty);
+          }
+        }
+      }
     } catch(e) { console.error('Supabase exception:', e.message); }
   }
 

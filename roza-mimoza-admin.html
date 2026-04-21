@@ -769,7 +769,18 @@ async function loadAll() {
     orders = (oRes.data || []).map(o => ({
       id: o.id, name: o.customer_name, phone: o.phone,
       email: o.email || '', city: o.city,
-      items: Array.isArray(o.items) ? o.items.map(i => typeof i === 'object' ? i.name || JSON.stringify(i) : i).join(', ') : String(o.items),
+      items: Array.isArray(o.items)
+        ? o.items.map(i => {
+            if(typeof i === 'object') {
+              let s = i.name || '';
+              if(i.qty) s += ' x' + i.qty;
+              if(i.size) s += ' (' + i.size + ')';
+              if(i.color) s += ' - ' + i.color;
+              return s;
+            }
+            return String(i);
+          }).join(', ')
+        : String(o.items),
       total: parseFloat(o.total), status: o.status,
       date: (o.created_at || '').split('T')[0], note: o.note || ''
     }));
@@ -913,6 +924,7 @@ function filterOrderStatus(v) { orderStatusFilter = v; renderOrders(); }
 async function changeOrderStatus(id, status) {
   const o = orders.find(x => x.id === id);
   if(!o) return;
+  const prevStatus = o.status;
   o.status = status;
   if(isConfigured()) {
     const { error } = await sb.from('orders').update({ status }).eq('id', id);
