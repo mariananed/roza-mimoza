@@ -964,7 +964,16 @@
       <span>Общо:</span>
       <strong id="cart-total">0.00 €</strong>
     </div>
-    <button class="checkout-btn" onclick="checkout()">Към поръчката →</button>
+    <div id="min-order-bar" style="margin-bottom:12px;display:none;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
+        <span style="color:var(--text-mid);font-weight:700;">Минимална поръчка: 10 €</span>
+        <span id="min-order-left" style="color:var(--rose);font-weight:700;"></span>
+      </div>
+      <div style="background:var(--rose-pale);border-radius:6px;height:6px;overflow:hidden;">
+        <div id="min-order-progress" style="height:100%;border-radius:6px;background:var(--rose);transition:width 0.3s;width:0%;"></div>
+      </div>
+    </div>
+    <button class="checkout-btn" id="checkout-btn" onclick="checkout()">Към поръчката →</button>
     <div class="econt-note">📦 Доставка с Еконт &nbsp;·&nbsp; Наложен платеж</div>
   </div>
 </div>
@@ -1241,10 +1250,38 @@ function changeQty(key, delta) {
   updateCart();
 }
 
+const MIN_ORDER_AMOUNT = 10;
+
 function updateCart() {
   const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
   document.getElementById('cart-count').textContent = cart.reduce((s,i) => s+i.qty, 0);
   document.getElementById('cart-total').textContent = total.toFixed(2) + ' €';
+
+  // Минимална поръчка
+  const minBar = document.getElementById('min-order-bar');
+  const minLeft = document.getElementById('min-order-left');
+  const minProgress = document.getElementById('min-order-progress');
+  const checkoutBtn = document.getElementById('checkout-btn');
+
+  if(cart.length && minBar) {
+    minBar.style.display = 'block';
+    const pct = Math.min(100, Math.round(total / MIN_ORDER_AMOUNT * 100));
+    if(minProgress) minProgress.style.width = pct + '%';
+    if(total >= MIN_ORDER_AMOUNT) {
+      if(minLeft) minLeft.textContent = '✅ Достигнат';
+      if(minProgress) minProgress.style.background = '#3a8f5a';
+      if(checkoutBtn) { checkoutBtn.disabled = false; checkoutBtn.style.opacity = '1'; checkoutBtn.textContent = 'Към поръчката →'; }
+    } else {
+      const remaining = (MIN_ORDER_AMOUNT - total).toFixed(2);
+      if(minLeft) minLeft.textContent = 'Остават ' + remaining + ' €';
+      if(minProgress) minProgress.style.background = 'var(--rose)';
+      if(checkoutBtn) { checkoutBtn.disabled = true; checkoutBtn.style.opacity = '0.5'; checkoutBtn.textContent = 'Мин. поръчка 10 €'; }
+    }
+  } else if(minBar) {
+    minBar.style.display = 'none';
+    if(checkoutBtn) { checkoutBtn.disabled = false; checkoutBtn.style.opacity = '1'; checkoutBtn.textContent = 'Към поръчката →'; }
+  }
+
   const el = document.getElementById('cart-items');
   if(!cart.length) {
     el.innerHTML = '<p style="color:var(--text-light);font-size:14px;text-align:center;margin-top:40px;">Количката е празна 🌸</p>';
@@ -1276,8 +1313,12 @@ function toggleCart() {
 
 function checkout() {
   if(!cart.length) { alert('Количката е празна!'); return; }
-  document.getElementById('modal-total').textContent =
-    cart.reduce((s,i) => s + i.price * i.qty, 0).toFixed(2) + ' €';
+  const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
+  if(total < MIN_ORDER_AMOUNT) {
+    alert('Минималната стойност на поръчката е 10 €.\nМоля добавете още продукти.');
+    return;
+  }
+  document.getElementById('modal-total').textContent = total.toFixed(2) + ' €';
   toggleCart();
   document.getElementById('order-modal').style.display = 'flex';
 }
