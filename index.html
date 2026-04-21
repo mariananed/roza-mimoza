@@ -171,23 +171,7 @@
     background: linear-gradient(to bottom, rgba(61,43,43,0.45) 0%, rgba(61,43,43,0.25) 50%, rgba(61,43,43,0.55) 100%);
     z-index: 2;
   }
-  .hero-change-btn {
-    position: absolute; top: 14px; right: 14px;
-    background: rgba(255,255,255,0.85);
-    border: 1px solid var(--rose-light);
-    border-radius: 20px;
-    padding: 7px 14px;
-    font-size: 12px;
-    color: var(--rose);
-    cursor: pointer;
-    font-family: 'Lato', sans-serif;
-    font-weight: 700;
-    z-index: 10;
-    display: flex; align-items: center; gap: 6px;
-    transition: background 0.2s;
-  }
-  .hero-change-btn:hover { background: #fff; }
-  .hero-change-input { display: none; }
+
   .hero-content {
     position: relative; z-index: 6;
     text-align: center;
@@ -677,7 +661,7 @@
 <!-- Admin bar (visible only to owner) -->
 <!-- Top promo bar -->
 <div class="top-bar">
-  🌸 Безплатна доставка при поръчка над 50 евро &nbsp;|&nbsp; Доставка с Еконт &nbsp;|&nbsp; Наложен платеж
+  🌸 Безплатна доставка при поръчка над 15 евро &nbsp;|&nbsp; Доставка с Еконт &nbsp;|&nbsp; Наложен платеж
 </div>
 
 <!-- Header -->
@@ -777,14 +761,11 @@
   </div>
 
   <div class="hero-overlay"></div>
-  <label class="hero-change-btn" for="hero-upload">
-    📷 Смяна на снимка
-  </label>
-  <input type="file" id="hero-upload" class="hero-change-input" accept="image/*" onchange="changeHero(event)">
+
 
   <div class="hero-content">
-    <h2 style="color:#fff;text-shadow:0 2px 16px rgba(0,0,0,0.6);">Ръчно изработени цветя с душа</h2>
-    <p style="color:rgba(255,255,255,0.95);text-shadow:0 1px 8px rgba(0,0,0,0.5);">Авторски цветя от плат и декорации за всякакви проекти — уникални и направени с поглед към детайла</p>
+    <h2 style="color:#fff;text-shadow:0 2px 16px rgba(0,0,0,0.6);font-size:44px;font-weight:700;">Уникални авторски цветя от плат</h2>
+    <p style="color:rgba(255,255,255,0.95);text-shadow:0 1px 8px rgba(0,0,0,0.5);font-size:17px;font-weight:600;">Създадени с прецизна ръчна изработка, за да вдъхнат автентичен стил и неповторимост на всяка ваша творческа идея</p>
     <button class="hero-btn" onclick="document.getElementById('products-section').scrollIntoView({behavior:'smooth'})">Разгледай колекцията</button>
   </div>
 </div>
@@ -990,6 +971,7 @@
 
 <script src="supabase-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
 const DEFAULT_SIZES = {
   '5cm': { label: '5 см', price: 0.75 },
@@ -1154,10 +1136,10 @@ function productCard(p) {
   }
 
   const descHtml = p.desc
-    ? `<div style="font-size:11px;color:var(--text-light);line-height:1.5;margin-bottom:8px;">${p.desc}</div>`
+    ? `<div style="font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:8px;">${p.desc}</div>`
     : '';
   const matHtml = p.material
-    ? `<div style="font-size:10px;color:var(--text-light);margin-bottom:8px;">&#x1F9F5; ${p.material}</div>`
+    ? `<div style="font-size:11px;color:var(--text-mid);margin-bottom:6px;">&#x1F9F5; ${p.material}</div>`
     : '';
 
   // Наличност индикатор
@@ -1305,20 +1287,66 @@ function closeModal() {
   toggleCart();
 }
 
-function confirmOrder() {
+async function confirmOrder() {
   const name = document.getElementById('ord-name').value.trim();
   const email = document.getElementById('ord-email').value.trim();
   const phone = document.getElementById('ord-phone').value.trim();
   const city = document.getElementById('ord-city').value.trim();
+  const note = document.getElementById('ord-note').value.trim();
   if(!name || !email || !phone || !city) {
     alert('Моля попълнете всички задължителни полета (*)');
     return;
   }
-  // In production: send order data to backend/email service here
+
+  const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
+  const itemsList = cart.map(i => `${i.name}${i.size?' ('+i.size+')':''}${i.color?' - '+i.color:''} x${i.qty} = ${(i.price*i.qty).toFixed(2)}€`).join('
+');
+  const itemsShort = cart.map(i => `${i.name} x${i.qty}`).join(', ');
+
+  // Disable button
+  const btn = document.querySelector('#order-modal .checkout-btn, #order-modal button[onclick*="confirmOrder"]');
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ Изпращане...'; }
+
+  let savedToDb = false;
+  let orderData = {
+    customer_name: name, email, phone, city,
+    items: cart.map(i => ({name:i.name, size:i.size, color:i.color, price:i.price, qty:i.qty})),
+    total: parseFloat(total.toFixed(2)),
+    status: 'pending',
+    note: note || null
+  };
+
+  // 1. Запази в Supabase
+  if(sbShop) {
+    try {
+      const { data, error } = await sbShop.from('orders').insert([orderData]).select().single();
+      if(error) console.error('Supabase грешка:', error.message);
+      else { savedToDb = true; console.log('✅ Поръчка записана в Supabase, ID:', data.id); }
+    } catch(e) { console.error('Supabase exception:', e.message); }
+  }
+
+  // 2. Изпрати имейл с EmailJS
+  if(typeof emailjs !== 'undefined' && window.EMAILJS_PUBLIC_KEY && window.EMAILJS_SERVICE_ID && window.EMAILJS_TEMPLATE_ID) {
+    try {
+      await emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
+        customer_name: name,
+        customer_email: email,
+        customer_phone: phone,
+        customer_city: city,
+        order_items: itemsList,
+        order_total: total.toFixed(2) + ' €',
+        order_note: note || 'Няма',
+      }, window.EMAILJS_PUBLIC_KEY);
+      console.log('✅ Имейл изпратен успешно');
+    } catch(e) { console.error('EmailJS грешка:', e.message); }
+  }
+
+  // 3. Покажи успех
   document.getElementById('order-modal').style.display = 'none';
   document.getElementById('success-modal').style.display = 'flex';
   cart = [];
   updateCart();
+  if(btn) { btn.disabled = false; btn.textContent = '✅ Потвърди поръчката'; }
 }
 
 function sendSpecialOrder() {
@@ -1339,7 +1367,7 @@ function sendSpecialOrder() {
 // Постави URL на снимката тук (от Supabase Storage или друг публичен линк):
 // Например: 'https://xxxxx.supabase.co/storage/v1/object/public/product-images/hero.jpg'
 // Остави '' ако не искаш снимка
-const HERO_IMAGE_URL = 'https://qewdtgmycenrqfaretmx.supabase.co/storage/v1/object/public/product-images/products/1776615034584.jpg';
+const HERO_IMAGE_URL = '';
 
 function changeHero(e) {
   const file = e.target.files[0];
