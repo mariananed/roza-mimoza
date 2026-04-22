@@ -515,10 +515,25 @@
 
     <!-- ═══ SPECIAL ORDERS ═══ -->
     <div id="tab-special" class="tab-panel">
-      <div class="alert alert-ok">✨ Запитванията за специални поръчки от сайта се показват тук. Клиентите изпращат форма и вие отговаряте директно по имейл.</div>
+      <div class="alert alert-ok">✨ Запитванията за специални поръчки. Комуникацията е лична — през Messenger или имейл.</div>
+      <div class="search-row">
+        <select class="filter-select" id="special-status-filter" onchange="renderSpecial()">
+          <option value="">Всички статуси</option>
+          <option value="new">Нова</option>
+          <option value="accepted">Приета</option>
+          <option value="sent">Изпратена</option>
+          <option value="paid">Платена</option>
+          <option value="cancelled">Невзета</option>
+        </select>
+        <select class="filter-select" id="special-sort" onchange="renderSpecial()">
+          <option value="date_desc">Най-нови първо</option>
+          <option value="date_asc">Най-стари първо</option>
+          <option value="status">По статус</option>
+        </select>
+      </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Клиент</th><th>Имейл</th><th>Телефон</th><th>Категория</th><th>Описание</th><th>Дата</th><th>Статус</th></tr></thead>
+          <thead><tr><th>Клиент</th><th>Контакт</th><th>Категория</th><th>Описание</th><th>Дата</th><th>Статус</th><th>Действия</th></tr></thead>
           <tbody id="special-tbody"></tbody>
         </table>
       </div>
@@ -785,9 +800,10 @@ async function loadAll() {
       date: (o.created_at || '').split('T')[0], note: o.note || ''
     }));
     specialOrders = (sRes.data || []).map(s => ({
-      name: s.name, email: s.email, phone: s.phone || '',
+      id: String(s.id), name: s.name, email: s.email, phone: s.phone || '',
       cat: s.category || '', desc: s.description || '',
-      date: (s.created_at || '').split('T')[0], status: s.status === 'new' ? 'Нова' : s.status === 'in_progress' ? 'В процес' : 'Завършена'
+      date: (s.created_at || '').split('T')[0],
+      status: s.status || 'new'
     }));
     stockLog = (lRes.data || []).map(l => ({
       type: l.type, text: l.note || l.product_name, time: formatTime(l.created_at)
@@ -1347,16 +1363,83 @@ function renderReport() {
 }
 
 // ── SPECIAL ORDERS ────────────────────────────────────
+const SPECIAL_STATUSES = {
+  new:       { label: 'Нова',      badge: 'badge-new' },
+  accepted:  { label: 'Приета',    badge: 'badge-warn' },
+  sent:      { label: 'Изпратена', badge: 'badge-sent' },
+  paid:      { label: 'Платена',   badge: 'badge-ok' },
+  cancelled: { label: 'Невзета',   badge: 'badge-out' },
+};
+
+function specialStatusLabel(s) {
+  return SPECIAL_STATUSES[s] ? SPECIAL_STATUSES[s].label : s;
+}
+function specialStatusBadge(s) {
+  const cls = SPECIAL_STATUSES[s] ? SPECIAL_STATUSES[s].badge : 'badge-new';
+  return `<span class="badge ${cls}">${specialStatusLabel(s)}</span>`;
+}
+
 function renderSpecial() {
-  document.getElementById('special-tbody').innerHTML = specialOrders.length
-    ? specialOrders.map(s => `
-    <tr><td><strong>${s.name}</strong></td>
-    <td><a href="mailto:${s.email}" style="color:var(--rose);text-decoration:none;">${s.email}</a></td>
-    <td>${s.phone}</td><td>${s.cat}</td>
-    <td style="font-size:12px;max-width:180px;">${s.desc}</td>
-    <td style="font-size:12px;">${s.date}</td>
-    <td><span class="badge ${s.status==='Нова'?'badge-new':s.status==='В процес'?'badge-warn':'badge-ok'}">${s.status}</span></td></tr>`).join('')
+  const statusFilter = document.getElementById('special-status-filter') ? document.getElementById('special-status-filter').value : '';
+  const sort = document.getElementById('special-sort') ? document.getElementById('special-sort').value : 'date_desc';
+
+  let filtered = specialOrders.filter(s => !statusFilter || s.status === statusFilter);
+
+  // Sort
+  filtered = filtered.sort((a, b) => {
+    if(sort === 'date_asc') return a.date.localeCompare(b.date);
+    if(sort === 'status') return (a.status || '').localeCompare(b.status || '');
+    return b.date.localeCompare(a.date); // date_desc default
+  });
+
+  const tbody = document.getElementById('special-tbody');
+  tbody.innerHTML = filtered.length ? filtered.map(s => `
+    <tr>
+      <td><strong>${s.name}</strong></td>
+      <td style="font-size:12px;">
+        <a href="mailto:${s.email}" style="color:var(--rose);text-decoration:none;display:block;">${s.email}</a>
+        ${s.phone ? `<span style="color:var(--text-light);">${s.phone}</span>` : ''}
+      </td>
+      <td style="font-size:12px;">${s.cat || '—'}</td>
+      <td style="font-size:12px;max-width:200px;line-height:1.5;">${s.desc || '—'}</td>
+      <td style="font-size:12px;white-space:nowrap;">${s.date}</td>
+      <td>
+        <select onchange="changeSpecialStatus('${s.id}', this.value)"
+          style="border:1px solid var(--rose-light);border-radius:8px;padding:4px 8px;font-size:12px;font-family:'Lato',sans-serif;background:var(--white);">
+          <option value="new"       ${s.status==='new'?'selected':''}>Нова</option>
+          <option value="accepted"  ${s.status==='accepted'?'selected':''}>Приета</option>
+          <option value="sent"      ${s.status==='sent'?'selected':''}>Изпратена</option>
+          <option value="paid"      ${s.status==='paid'?'selected':''}>Платена</option>
+          <option value="cancelled" ${s.status==='cancelled'?'selected':''}>Невзета</option>
+        </select>
+      </td>
+      <td>
+        <a href="https://m.me/marianajordancreative" target="_blank" class="btn btn-outline btn-sm" style="margin-bottom:4px;display:inline-block;">💬</a>
+        <button class="btn btn-danger btn-sm" onclick="deleteSpecial('${s.id}')">🗑</button>
+      </td>
+    </tr>`).join('')
     : '<tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:20px;">Няма специални запитвания</td></tr>';
+}
+
+async function changeSpecialStatus(id, status) {
+  const s = specialOrders.find(x => String(x.id) === String(id));
+  if(!s) return;
+  s.status = status;
+  if(isConfigured()) {
+    const { error } = await sb.from('special_orders').update({ status }).eq('id', id);
+    if(error) { showError('Грешка: ' + error.message); return; }
+  }
+  renderSpecial();
+}
+
+async function deleteSpecial(id) {
+  if(!confirm('Изтриване на запитването?')) return;
+  if(isConfigured()) {
+    const { error } = await sb.from('special_orders').delete().eq('id', id);
+    if(error) { showError('Грешка при изтриване: ' + error.message); return; }
+  }
+  specialOrders = specialOrders.filter(x => String(x.id) !== String(id));
+  renderSpecial();
 }
 
 // ── HELPERS ───────────────────────────────────────────
