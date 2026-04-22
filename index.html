@@ -661,7 +661,7 @@
 <!-- Admin bar (visible only to owner) -->
 <!-- Top promo bar -->
 <div class="top-bar">
-  🌸 Безплатна доставка при поръчка над 15 евро &nbsp;|&nbsp; Доставка с Еконт &nbsp;|&nbsp; Наложен платеж
+  🌸 Безплатна доставка при поръчка над 50 евро &nbsp;|&nbsp; Доставка с Еконт &nbsp;|&nbsp; Наложен платеж
 </div>
 
 <!-- Header -->
@@ -926,12 +926,15 @@
     </div>
     <div>
       <h5>Категории</h5>
-      <a href="#">🌹 Рози</a>
-      <a href="#">🤍 Гардении</a>
-      <a href="#">🌸 Божури</a>
-      <a href="#">💐 Колекции</a>
-      <a href="#">✨ Специални</a>
-      <a href="#">🍃 Листа</a>
+      <a href="#" onclick="footerCat('rozi');return false;">🌹 Рози</a>
+      <a href="#" onclick="footerCat('gardenii');return false;">🤍 Гардении</a>
+      <a href="#" onclick="footerCat('koleda');return false;">⭐ Коледни звезди</a>
+      <a href="#" onclick="footerCat('bozuri');return false;">🌸 Божури</a>
+      <a href="#" onclick="footerCat('pelargoniu');return false;">🌺 Обикновени цветя</a>
+      <a href="#" onclick="footerCat('malki');return false;">🌼 Малки цветя</a>
+      <a href="#" onclick="footerCat('kolektsii');return false;">💐 Колекции</a>
+      <a href="#" onclick="footerCat('spetsialni');return false;">✨ Специални</a>
+      <a href="#" onclick="footerCat('lista');return false;">🍃 Листа</a>
     </div>
     <div>
       <h5>Информация</h5>
@@ -1076,6 +1079,24 @@ function searchProducts(query) {
   grid.innerHTML = filtered.length
     ? filtered.map(p => productCard(p)).join('')
     : `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-light);font-size:14px;">🌸 Няма намерени продукти за "${query}"</div>`;
+}
+
+function footerCat(cat) {
+  // Scroll to products and filter
+  document.getElementById('products-section').scrollIntoView({behavior:'smooth'});
+  setTimeout(() => {
+    filterCat(cat, null);
+    // Update active pills
+    document.querySelectorAll('.cat-pill').forEach(p => {
+      p.classList.remove('active');
+      if(p.getAttribute('onclick') && p.getAttribute('onclick').includes("'" + cat + "'")) p.classList.add('active');
+    });
+    // Update nav links
+    document.querySelectorAll('nav a').forEach(a => {
+      a.classList.remove('active');
+      if(a.getAttribute('onclick') && a.getAttribute('onclick').includes("'" + cat + "'")) a.classList.add('active');
+    });
+  }, 400);
 }
 
 function filterCat(cat, el) {
@@ -1229,8 +1250,17 @@ function addToCart(id) {
   }
   const key = `${id}-${size||'fixed'}-${color}`;
   const existing = cart.find(x => x.key === key);
-  if(existing) { existing.qty++; }
-  else { cart.push({ key, id, name:p.name, emoji:p.emoji, size:sizeLabel, color, price, qty:1 }); }
+  const maxQty = p.qty || 999;
+  if(existing) {
+    if(existing.qty >= maxQty) {
+      alert('Не може да поръчате повече от наличните ' + maxQty + ' бр. на "' + p.name + '".');
+      return;
+    }
+    existing.qty++;
+  } else {
+    if(maxQty === 0) { alert('Продуктът е изчерпан.'); return; }
+    cart.push({ key, id, name:p.name, emoji:p.emoji, size:sizeLabel, color, price, qty:1 });
+  }
   updateCart();
   // flash cart button
   const btn = document.getElementById('cart-count');
@@ -1245,6 +1275,14 @@ function removeFromCart(key) {
 function changeQty(key, delta) {
   const item = cart.find(x => x.key === key);
   if(!item) return;
+  if(delta > 0) {
+    const p = PRODUCTS.find(x => String(x.id) === String(item.id));
+    const maxQty = p ? (p.qty || 999) : 999;
+    if(item.qty >= maxQty) {
+      alert('Не може да поръчате повече от наличните ' + maxQty + ' бр.');
+      return;
+    }
+  }
   item.qty += delta;
   if(item.qty <= 0) cart = cart.filter(x => x.key !== key);
   updateCart();
@@ -1422,18 +1460,35 @@ async function confirmOrder() {
   if(btn) { btn.disabled = false; btn.textContent = '✅ Потвърди поръчката'; }
 }
 
-function sendSpecialOrder() {
+async function sendSpecialOrder() {
   const name = document.getElementById('cf-name').value.trim();
   const email = document.getElementById('cf-email').value.trim();
+  const phone = document.getElementById('cf-phone') ? document.getElementById('cf-phone').value.trim() : '';
+  const cat = document.getElementById('cf-cat') ? document.getElementById('cf-cat').value : '';
+  const msg = document.getElementById('cf-msg') ? document.getElementById('cf-msg').value.trim() : '';
   if(!name || !email) { alert('Моля въведете поне вашето име и имейл.'); return; }
-  // In production: send to backend/email service here
+
+  // Save to Supabase
+  if(sbShop) {
+    try {
+      const { error } = await sbShop.from('special_orders').insert([{
+        name, email, phone: phone || null,
+        category: cat || null,
+        description: msg || null,
+        status: 'new'
+      }]);
+      if(error) console.error('Грешка при запис:', error.message);
+      else console.log('Специална поръчка записана успешно');
+    } catch(e) { console.error(e.message); }
+  }
+
   document.getElementById('cf-confirm').style.display = 'block';
   document.getElementById('cf-name').value = '';
   document.getElementById('cf-email').value = '';
-  document.getElementById('cf-phone').value = '';
-  document.getElementById('cf-cat').value = '';
-  document.getElementById('cf-msg').value = '';
-  setTimeout(() => document.getElementById('cf-confirm').style.display = 'none', 5000);
+  if(document.getElementById('cf-phone')) document.getElementById('cf-phone').value = '';
+  if(document.getElementById('cf-cat')) document.getElementById('cf-cat').value = '';
+  if(document.getElementById('cf-msg')) document.getElementById('cf-msg').value = '';
+  setTimeout(() => { const el = document.getElementById('cf-confirm'); if(el) el.style.display = 'none'; }, 5000);
 }
 
 // ── ШАПКА СНИМКА ─────────────────────────────────────
