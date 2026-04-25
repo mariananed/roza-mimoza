@@ -2,6 +2,9 @@
 <html lang="bg">
 <head>
 <meta charset="UTF-8">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Роза-Мимоза Магазин</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
@@ -874,6 +877,7 @@
         <option>Обикновени цветя</option>
         <option>Малки цветя</option>
       </select>
+      <input type="text" id="cf-honeypot" name="website" style="display:none;" tabindex="-1" autocomplete="off">
       <textarea id="cf-msg" placeholder="Опишете желаните цветове, размери и брой..."></textarea>
       <button onclick="sendSpecialOrder()">Изпрати запитване 🌸</button>
     </div>
@@ -902,10 +906,17 @@
       <input type="email" id="ord-email" placeholder="Имейл за потвърждение *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
       <input type="tel" id="ord-phone" placeholder="Телефон *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
       <input type="text" id="ord-city" placeholder="Град и офис на Еконт *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
+      <input type="text" id="ord-honeypot" name="website" style="display:none;" tabindex="-1" autocomplete="off">
       <textarea id="ord-note" placeholder="Бележка към поръчката (незадължително)" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;height:70px;resize:vertical;"></textarea>
       <div style="background:var(--rose-pale);border-radius:10px;padding:12px 14px;font-size:13px;border:1px solid var(--rose-light);">
         <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="color:var(--text-mid);">Сума:</span><strong id="modal-total" style="color:var(--rose);">0.00 €</strong></div>
         <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-mid);">Доставка:</span><span style="color:var(--text-mid);font-size:12px;">Наложен платеж (Еконт)</span></div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:10px;background:var(--rose-pale);border-radius:10px;padding:10px 12px;">
+        <input type="checkbox" id="gdpr-consent" style="margin-top:2px;accent-color:var(--rose);width:16px;height:16px;cursor:pointer;flex-shrink:0;">
+        <label for="gdpr-consent" style="font-size:12px;color:var(--text-mid);line-height:1.6;cursor:pointer;">
+          Прочетох и приемам <a href="#" onclick="closeModal();showTerms();return false;" style="color:var(--rose);font-weight:700;">Общите условия</a> и се съгласявам личните ми данни да се обработват за целите на поръчката.
+        </label>
       </div>
       <button onclick="confirmOrder()" style="background:var(--rose);color:#fff;border:none;border-radius:24px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;transition:background 0.2s;" onmouseover="this.style.background='var(--text-mid)'" onmouseout="this.style.background='var(--rose)'">✅ Потвърди поръчката</button>
       <button onclick="closeModal()" style="background:none;border:1px solid var(--rose-light);border-radius:24px;padding:10px;font-size:13px;color:var(--text-light);cursor:pointer;font-family:'Lato',sans-serif;">Назад към количката</button>
@@ -1006,6 +1017,27 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
+// ── XSS ЗАЩИТА ───────────────────────────────────────
+function sanitize(str) {
+  if(typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    .replace(/`/g, '&#x60;')
+    .trim()
+    .substring(0, 500); // max length
+}
+
+function sanitizeInput(id) {
+  const el = document.getElementById(id);
+  if(!el) return '';
+  return sanitize(el.value);
+}
+
 const DEFAULT_SIZES = {
   '5cm': { label: '5 см', price: 0.75 },
   '4cm': { label: '4 см', price: 0.60 },
@@ -1388,13 +1420,48 @@ function closeModal() {
 }
 
 async function confirmOrder() {
-  const name = document.getElementById('ord-name').value.trim();
-  const email = document.getElementById('ord-email').value.trim();
-  const phone = document.getElementById('ord-phone').value.trim();
-  const city = document.getElementById('ord-city').value.trim();
-  const note = document.getElementById('ord-note').value.trim();
+  // Honeypot check - if filled, it's a bot
+  const honeypot = document.getElementById('ord-honeypot');
+  if(honeypot && honeypot.value) { console.warn('Bot detected'); return; }
+
+  const name = sanitizeInput('ord-name');
+  const email = sanitizeInput('ord-email');
+  const phone = sanitizeInput('ord-phone');
+  const city = sanitizeInput('ord-city');
+  const note = sanitizeInput('ord-note');
+
+  // Validation
   if(!name || !email || !phone || !city) {
     alert('Моля попълнете всички задължителни полета (*)');
+    return;
+  }
+
+  // Email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if(!emailRegex.test(email)) {
+    alert('Моля въведете валиден имейл адрес.');
+    return;
+  }
+
+  // Phone validation - min 7 digits
+  const phoneDigits = phone.replace(/\D/g, '');
+  if(phoneDigits.length < 7) {
+    alert('Моля въведете валиден телефонен номер.');
+    return;
+  }
+
+  // GDPR consent check
+  const gdpr = document.getElementById('gdpr-consent');
+  if(gdpr && !gdpr.checked) {
+    alert('Моля приемете Общите условия за да продължите.');
+    return;
+  }
+
+  // Rate limiting - max 3 orders per email per session
+  const orderKey = 'rm_orders_' + email.toLowerCase();
+  const orderCount = parseInt(sessionStorage.getItem(orderKey) || '0');
+  if(orderCount >= 3) {
+    alert('Достигнат е максималният брой поръчки за тази сесия. Моля свържете се с нас директно.');
     return;
   }
 
@@ -1474,6 +1541,10 @@ async function confirmOrder() {
   }
 
   // 3. Покажи успех
+  // Update rate limit counter
+  const orderKeyFinal = 'rm_orders_' + email.toLowerCase();
+  sessionStorage.setItem(orderKeyFinal, String(parseInt(sessionStorage.getItem(orderKeyFinal) || '0') + 1));
+
   document.getElementById('order-modal').style.display = 'none';
   document.getElementById('success-modal').style.display = 'flex';
   cart = [];
@@ -1482,12 +1553,28 @@ async function confirmOrder() {
 }
 
 async function sendSpecialOrder() {
-  const name = document.getElementById('cf-name').value.trim();
-  const email = document.getElementById('cf-email').value.trim();
-  const phone = document.getElementById('cf-phone') ? document.getElementById('cf-phone').value.trim() : '';
-  const cat = document.getElementById('cf-cat') ? document.getElementById('cf-cat').value : '';
-  const msg = document.getElementById('cf-msg') ? document.getElementById('cf-msg').value.trim() : '';
-  if(!name || !email) { alert('Моля въведете поне вашето име и имейл.'); return; }
+  // Honeypot check
+  const hpot = document.getElementById('cf-honeypot');
+  if(hpot && hpot.value) { console.warn('Bot detected'); return; }
+
+  const name = sanitizeInput('cf-name');
+  const email = sanitizeInput('cf-email');
+  const phone = sanitizeInput('cf-phone');
+  const cat = sanitizeInput('cf-cat');
+  const msg = sanitizeInput('cf-msg');
+
+  if(!name || !email) { alert('Моля въведете поне вашето ime и имейл.'); return; }
+
+  // Email validation
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if(!emailRe.test(email)) { alert('Моля въведете валиден имейл адрес.'); return; }
+
+  // Rate limit - max 2 special orders per session
+  const spKey = 'rm_special_' + email.toLowerCase();
+  if(parseInt(sessionStorage.getItem(spKey) || '0') >= 2) {
+    alert('Вече изпратихте запитване. Ще се свържем с вас скоро.');
+    return;
+  }
 
   // Save to Supabase
   if(sbShop) {
@@ -1503,6 +1590,10 @@ async function sendSpecialOrder() {
     } catch(e) { console.error(e.message); }
   }
 
+  // Rate limit counter
+  const spKeyFinal = 'rm_special_' + email.toLowerCase();
+  sessionStorage.setItem(spKeyFinal, String(parseInt(sessionStorage.getItem(spKeyFinal) || '0') + 1));
+
   document.getElementById('cf-confirm').style.display = 'block';
   document.getElementById('cf-name').value = '';
   document.getElementById('cf-email').value = '';
@@ -1510,6 +1601,29 @@ async function sendSpecialOrder() {
   if(document.getElementById('cf-cat')) document.getElementById('cf-cat').value = '';
   if(document.getElementById('cf-msg')) document.getElementById('cf-msg').value = '';
   setTimeout(() => { const el = document.getElementById('cf-confirm'); if(el) el.style.display = 'none'; }, 5000);
+}
+
+// ── HTTPS REDIRECT ───────────────────────────────────
+if(location.protocol === 'http:' && location.hostname !== 'localhost') {
+  location.replace('https:' + location.href.substring(5));
+}
+
+// ── COOKIE BANNER ─────────────────────────────────────
+function initCookieBanner() {
+  if(!localStorage.getItem('rm_cookies_accepted')) {
+    setTimeout(() => {
+      const banner = document.getElementById('cookie-banner');
+      if(banner) banner.style.display = 'block';
+    }, 1000);
+  }
+}
+function acceptCookies() {
+  localStorage.setItem('rm_cookies_accepted', 'all');
+  document.getElementById('cookie-banner').style.display = 'none';
+}
+function declineCookies() {
+  localStorage.setItem('rm_cookies_accepted', 'necessary');
+  document.getElementById('cookie-banner').style.display = 'none';
 }
 
 // ── ШАПКА СНИМКА ─────────────────────────────────────
@@ -1604,6 +1718,7 @@ async function loadProductsFromDB() {
 
 // Init
 loadProductsFromDB();
+initCookieBanner();
 </script>
 
 <!-- LIGHTBOX -->
@@ -1612,6 +1727,24 @@ loadProductsFromDB();
     <img id="lightbox-img" src="" alt="" style="max-width:90vw;max-height:85vh;object-fit:contain;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
     <div id="lightbox-title" style="text-align:center;color:#fff;font-family:'Playfair Display',serif;font-size:18px;margin-top:12px;"></div>
     <button onclick="closeLightbox()" style="position:absolute;top:-16px;right:-16px;background:var(--rose);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+  </div>
+</div>
+
+
+<!-- GDPR COOKIE BANNER -->
+<div id="cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:1000;background:#3D2B2B;padding:16px 24px;box-shadow:0 -4px 20px rgba(0,0,0,0.2);">
+  <div style="max-width:900px;margin:0 auto;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:250px;">
+      <p style="color:#F9EEF1;font-size:13px;line-height:1.6;margin:0;">
+        🍪 Този сайт използва бисквитки (cookies) за да функционира правилно.
+        Продължавайки да използвате сайта, вие се съгласявате с нашата
+        <a href="#" onclick="showTerms();return false;" style="color:var(--rose-light);text-decoration:underline;">Политика за поверителност</a>.
+      </p>
+    </div>
+    <div style="display:flex;gap:10px;flex-shrink:0;">
+      <button onclick="acceptCookies()" style="background:#C8748A;color:#fff;border:none;border-radius:20px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;">Приемам</button>
+      <button onclick="declineCookies()" style="background:none;border:1px solid rgba(232,180,192,0.4);color:#E8B4C0;border-radius:20px;padding:9px 16px;font-size:13px;cursor:pointer;font-family:'Lato',sans-serif;">Само необходими</button>
+    </div>
   </div>
 </div>
 

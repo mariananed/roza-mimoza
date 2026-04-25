@@ -296,6 +296,7 @@
     <div id="login-error" style="display:none;background:#FAECEA;border-radius:8px;padding:9px 14px;font-size:12px;color:#D85A30;margin-bottom:12px;">
       ❌ Грешна парола. Опитайте отново.
     </div>
+    <div id="login-attempts-info" style="font-size:11px;color:#B08080;text-align:center;margin-bottom:8px;"></div>
 
     <button onclick="checkLogin()"
       style="width:100%;background:#C8748A;color:#fff;border:none;border-radius:24px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;letter-spacing:0.04em;transition:background 0.2s;"
@@ -543,6 +544,20 @@
     <div id="tab-settings" class="tab-panel">
       <div style="max-width:540px;">
         <div class="sec-header" style="margin-bottom:20px;"><h2>Настройки на магазина</h2></div>
+
+        <!-- BACKUP SECTION -->
+        <div class="table-wrap" style="padding:20px;margin-bottom:20px;background:var(--info-light);border:1px solid var(--info);">
+          <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--text-dark);margin-bottom:10px;">💾 Архив и възстановяване</h3>
+          <p style="font-size:13px;color:var(--text-mid);margin-bottom:14px;line-height:1.6;">Изтегли пълен архив на всички данни (продукти, поръчки, специални поръчки) като JSON файл. Запази го на сигурно място.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="downloadBackup()">⬇️ Изтегли архив</button>
+            <label class="btn btn-outline" style="cursor:pointer;">
+              ⬆️ Възстанови от архив
+              <input type="file" accept=".json" style="display:none;" onchange="restoreBackup(this)">
+            </label>
+          </div>
+          <div id="backup-msg" style="display:none;margin-top:10px;border-radius:8px;padding:9px 14px;font-size:13px;"></div>
+        </div>
         <div class="table-wrap" style="padding:24px;">
           <div class="form-group"><label>Имейл за контакт</label><input id="set-email" value="mariana99jordan@gmail.com"></div>
           <div class="form-group"><label>Facebook страница</label><input id="set-facebook" value="https://www.facebook.com/share/1GTHzsR8YT/"></div>
@@ -718,6 +733,24 @@
 </div>
 
 <script>
+// ── XSS ЗАЩИТА ───────────────────────────────────────
+function sanitize(str) {
+  if(typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .trim()
+    .substring(0, 1000);
+}
+function sanitizeInput(id) {
+  const el = document.getElementById(id);
+  if(!el) return '';
+  return sanitize(el.value);
+}
+
 // ── SUPABASE INIT ──────────────────────────────────────
 // Ключовете идват от supabase-config.js
 let sb = null;
@@ -982,9 +1015,9 @@ function openOrderModal() {
 }
 
 async function saveOrder() {
-  const name = document.getElementById('om-name').value.trim();
-  const phone = document.getElementById('om-phone').value.trim();
-  const city = document.getElementById('om-city').value.trim();
+  const name = sanitizeInput('om-name');
+  const phone = sanitizeInput('om-phone');
+  const city = sanitizeInput('om-city');
   if(!name || !phone || !city) { alert('Попълнете задължителните полета.'); return; }
   const data = {
     customer_name: name, phone, email: document.getElementById('om-email').value,
@@ -1145,7 +1178,7 @@ async function uploadImage(file) {
 }
 
 async function saveProduct() {
-  const name = document.getElementById('pm-name').value.trim();
+  const name = sanitizeInput('pm-name');
   if(!name) { alert('Въведете име на продукта.'); return; }
 
   const priceType = document.getElementById('pm-price-type').value;
@@ -1600,8 +1633,29 @@ function showSettingsMsg(id, text, ok) {
 
 function logout() {
   sessionStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem('rm_last_activity');
   location.reload();
 }
+
+// ── АВТОМАТИЧНО РАЗЛОГВАНЕ СЛЕД 30 МИН ────────────────
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 минути
+let inactivityTimer;
+
+function resetInactivityTimer() {
+  sessionStorage.setItem('rm_last_activity', Date.now());
+  clearTimeout(inactivityTimer);
+  inactivityTimer = setTimeout(() => {
+    if(sessionStorage.getItem(SESSION_KEY)) {
+      alert('Сесията изтече поради неактивност. Моля влезте отново.');
+      logout();
+    }
+  }, INACTIVITY_TIMEOUT);
+}
+
+// Слушай за активност
+['mousemove','keydown','click','scroll','touchstart'].forEach(evt => {
+  document.addEventListener(evt, resetInactivityTimer, { passive: true });
+});
 
 function printOrder(id) {
   const o = orders.find(x => String(x.id) === String(id));
@@ -1686,6 +1740,113 @@ function printOrder(id) {
   win.document.close();
 }
 
+// ── БЕКЪП И ВЪЗСТАНОВЯВАНЕ ───────────────────────────
+async function downloadBackup() {
+  const btn = document.querySelector('[onclick="downloadBackup()"]');
+  if(btn) { btn.textContent = '⏳ Подготовка...'; btn.disabled = true; }
+
+  try {
+    let data = { products: [], orders: [], special_orders: [], timestamp: new Date().toISOString(), version: '1.0' };
+
+    if(isConfigured()) {
+      const [pRes, oRes, sRes] = await Promise.all([
+        sb.from('products').select('*').order('id'),
+        sb.from('orders').select('*').order('created_at'),
+        sb.from('special_orders').select('*').order('created_at'),
+      ]);
+      if(!pRes.error) data.products = pRes.data || [];
+      if(!oRes.error) data.orders = oRes.data || [];
+      if(!sRes.error) data.special_orders = sRes.data || [];
+    } else {
+      data.products = products;
+      data.orders = orders;
+      data.special_orders = specialOrders;
+    }
+
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const date = new Date().toISOString().split('T')[0];
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'roza-mimoza-backup-' + date + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+
+    showBackupMsg('✅ Архивът е изтеглен успешно! Запази го на сигурно място.', true);
+  } catch(e) {
+    showBackupMsg('❌ Грешка: ' + e.message, false);
+  } finally {
+    if(btn) { btn.textContent = '⬇️ Изтегли архив'; btn.disabled = false; }
+  }
+}
+
+async function restoreBackup(input) {
+  const file = input.files[0];
+  if(!file) return;
+
+  if(!confirm('⚠️ Внимание! Възстановяването ще презапише съществуващите данни. Сигурна ли сте?')) {
+    input.value = '';
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+
+    // Validate backup format
+    if(!data.version || !data.products || !data.orders) {
+      showBackupMsg('❌ Невалиден архивен файл.', false);
+      return;
+    }
+
+    showBackupMsg('⏳ Възстановяване...', true);
+
+    if(isConfigured()) {
+      // Restore products
+      if(data.products.length > 0) {
+        await sb.from('products').delete().neq('id', 0);
+        const { error: pErr } = await sb.from('products').insert(
+          data.products.map(p => {
+            const { id, ...rest } = p;
+            return rest;
+          })
+        );
+        if(pErr) throw new Error('Грешка при продуктите: ' + pErr.message);
+      }
+
+      // Restore orders
+      if(data.orders.length > 0) {
+        await sb.from('orders').delete().neq('id', 0);
+        const { error: oErr } = await sb.from('orders').insert(
+          data.orders.map(o => {
+            const { id, ...rest } = o;
+            return rest;
+          })
+        );
+        if(oErr) throw new Error('Грешка при поръчките: ' + oErr.message);
+      }
+
+      showBackupMsg('✅ Данните са възстановени успешно! Страницата ще се презареди...', true);
+      setTimeout(() => location.reload(), 2000);
+    } else {
+      showBackupMsg('❌ Supabase не е свързан. Не може да се възстанови.', false);
+    }
+  } catch(e) {
+    showBackupMsg('❌ Грешка при възстановяване: ' + e.message, false);
+  }
+  input.value = '';
+}
+
+function showBackupMsg(text, ok) {
+  const el = document.getElementById('backup-msg');
+  if(!el) return;
+  el.style.display = 'block';
+  el.style.background = ok ? 'var(--success-light)' : 'var(--danger-light)';
+  el.style.color = ok ? 'var(--success)' : 'var(--danger)';
+  el.textContent = text;
+}
+
 function saveSupabaseKeys() {
   alert('ℹ️ Ключовете сега се задават в файла supabase-config.js\nОтвори го с Notepad, попълни URL и KEY, запази и качи папката в Netlify.');
 }
@@ -1712,11 +1873,23 @@ if(sessionStorage.getItem(SESSION_KEY) === '1') {
   document.getElementById('login-screen').style.display = 'none';
   document.querySelector('.sidebar').style.display = 'flex';
   document.querySelector('.main').style.display = 'flex';
+  resetInactivityTimer();
   loadAll();
 } else {
   document.querySelector('.sidebar').style.display = 'none';
   document.querySelector('.main').style.display = 'none';
-  document.getElementById('login-password').focus();
+
+  // Check if locked out on page load
+  const attempts = getLoginAttempts();
+  if(attempts.count >= MAX_LOGIN_ATTEMPTS) {
+    const remaining = Math.ceil((LOCKOUT_TIME - (Date.now() - attempts.time)) / 60000);
+    document.getElementById('login-error').style.display = 'block';
+    document.getElementById('login-error').textContent =
+      '🔒 Твърде много неуспешни опити. Опитайте след ' + remaining + ' мин.';
+    document.getElementById('login-password').disabled = true;
+  } else {
+    document.getElementById('login-password').focus();
+  }
 }
 </script>
 </body>
