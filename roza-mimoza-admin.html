@@ -1502,6 +1502,18 @@ function todayShort() {
   const d = new Date();
   return `${d.getDate()} ${['яну','фев','мар','апр','май','юни','юли','авг','сеп','окт','ное','дек'][d.getMonth()]}`;
 }
+// ── BRUTE FORCE ЗАЩИТА ───────────────────────────────
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_TIME = 15 * 60 * 1000; // 15 минути
+
+function getLoginAttempts() {
+  try {
+    const data = JSON.parse(localStorage.getItem('rm_login_attempts') || '{"count":0,"time":0}');
+    if(Date.now() - data.time > LOCKOUT_TIME) return { count: 0, time: 0 };
+    return data;
+  } catch(e) { return { count: 0, time: 0 }; }
+}
+
 // ── ПАРОЛА (хеширана с SHA-256) ───────────────────────
 // Паролата се съхранява като хеш — никога като текст!
 // За да смениш паролата: Настройки → Смяна на парола
@@ -1523,15 +1535,47 @@ async function getStoredHash() {
   return localStorage.getItem(PW_HASH_KEY) || DEFAULT_PW_HASH;
 }
 
-function checkLogin() {
+async function checkLogin() {
+  const attempts = getLoginAttempts();
+
+  if(attempts.count >= MAX_LOGIN_ATTEMPTS) {
+    const remaining = Math.ceil((LOCKOUT_TIME - (Date.now() - attempts.time)) / 60000);
+    const errEl = document.getElementById('login-error');
+    errEl.style.display = 'block';
+    errEl.textContent = '🔒 Твърде много неуспешни опити. Опитайте след ' + remaining + ' мин.';
+    document.getElementById('login-password').disabled = true;
+    return;
+  }
+
   const input = document.getElementById('login-password').value;
-  if(input === getPassword()) {
+  if(!input) return;
+
+  const inputHash = await hashPassword(input);
+  const storedHash = await getStoredHash();
+
+  if(inputHash === storedHash) {
+    localStorage.removeItem('rm_login_attempts');
     sessionStorage.setItem(SESSION_KEY, '1');
     document.getElementById('login-screen').style.display = 'none';
     document.querySelector('.sidebar').style.display = 'flex';
     document.querySelector('.main').style.display = 'flex';
+    resetInactivityTimer();
+    loadAll();
   } else {
-    document.getElementById('login-error').style.display = 'block';
+    const newCount = attempts.count + 1;
+    localStorage.setItem('rm_login_attempts', JSON.stringify({
+      count: newCount,
+      time: attempts.count === 0 ? Date.now() : attempts.time
+    }));
+    const remaining = MAX_LOGIN_ATTEMPTS - newCount;
+    const errEl = document.getElementById('login-error');
+    errEl.style.display = 'block';
+    if(remaining <= 0) {
+      errEl.textContent = '🔒 Акаунтът е заключен за 15 минути.';
+      document.getElementById('login-password').disabled = true;
+    } else {
+      errEl.textContent = '❌ Грешна парола. Остават ' + remaining + ' опита.';
+    }
     document.getElementById('login-password').value = '';
     document.getElementById('login-password').focus();
   }
