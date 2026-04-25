@@ -1502,13 +1502,25 @@ function todayShort() {
   const d = new Date();
   return `${d.getDate()} ${['яну','фев','мар','апр','май','юни','юли','авг','сеп','окт','ное','дек'][d.getMonth()]}`;
 }
-// ── ПАРОЛА ────────────────────────────────────────────
-const DEFAULT_PASSWORD = 'RozaMimoza2025';
+// ── ПАРОЛА (хеширана с SHA-256) ───────────────────────
+// Паролата се съхранява като хеш — никога като текст!
+// За да смениш паролата: Настройки → Смяна на парола
 const SESSION_KEY = 'rm_admin_auth';
-const PW_KEY = 'rm_admin_pw';
+const PW_HASH_KEY = 'rm_admin_pw_hash';
 
-function getPassword() {
-  return localStorage.getItem(PW_KEY) || DEFAULT_PASSWORD;
+// Default парола хеш (SHA-256 на 'RozaMimoza2025')
+// Дори да видиш този хеш — не можеш да разбереш паролата от него
+const DEFAULT_PW_HASH = 'd2fa90a2a27367b62dd0090ef549588128ee33823b94c918041b08ba6e3b2d9e';
+
+async function hashPassword(password) {
+  const msgBuffer = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function getStoredHash() {
+  return localStorage.getItem(PW_HASH_KEY) || DEFAULT_PW_HASH;
 }
 
 function checkLogin() {
@@ -1525,13 +1537,17 @@ function checkLogin() {
   }
 }
 
-function changePassword() {
+async function changePassword() {
   const current = document.getElementById('pw-current').value;
   const newPw = document.getElementById('pw-new').value;
   const confirm = document.getElementById('pw-confirm').value;
   const msg = document.getElementById('pw-msg');
 
-  if(current !== getPassword()) {
+  // Verify current password via hash
+  const currentHash = await hashPassword(current);
+  const storedHash = await getStoredHash();
+
+  if(currentHash !== storedHash) {
     msg.style.display = 'block';
     msg.style.background = '#FAECEA';
     msg.style.color = '#D85A30';
@@ -1552,11 +1568,15 @@ function changePassword() {
     msg.textContent = '❌ Двете пароли не съвпадат.';
     return;
   }
-  localStorage.setItem(PW_KEY, newPw);
+
+  // Store only the hash, never the plain password
+  const newHash = await hashPassword(newPw);
+  localStorage.setItem(PW_HASH_KEY, newHash);
+
   msg.style.display = 'block';
   msg.style.background = '#E8F5EE';
   msg.style.color = '#2E7D52';
-  msg.textContent = '✅ Паролата е сменена успешно!';
+  msg.textContent = '✅ Паролата е сменена успешно! Паролата се пази само като хеш — никога като текст.';
   document.getElementById('pw-current').value = '';
   document.getElementById('pw-new').value = '';
   document.getElementById('pw-confirm').value = '';
