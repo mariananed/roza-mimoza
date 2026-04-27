@@ -1026,10 +1026,16 @@ function sanitize(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;')
-    .replace(/`/g, '&#x60;')
     .trim()
-    .substring(0, 500); // max length
+    .substring(0, 500);
+}
+
+// Sanitize данни идващи от базата данни (XSS защита)
+function sd(str) {
+  if(!str) return '';
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(String(str)));
+  return div.innerHTML;
 }
 
 function sanitizeInput(id) {
@@ -1176,7 +1182,10 @@ function productCard(p) {
   const badge = p.badge === 'new' ? '<span class="badge-new">НОВО</span>' :
                 p.badge === 'special' ? '<span class="badge-special">СПЕЦИАЛНО</span>' : '';
 
-  const safeName = p.name.replace(/'/g, "&#39;");
+  // Sanitize DB data against stored XSS
+  const safeName = sanitize(p.name || '');
+  const safeDesc = sanitize(p.desc || '');
+  const safeMat = sanitize(p.material || '');
   const imgHtml = p.image
     ? `<img src="${p.image}" alt="${p.name}" style="width:100%;height:180px;object-fit:cover;cursor:zoom-in;" onclick="openLightbox(this.src,'${safeName}')">`
     : `<div class="product-img" style="cursor:default;">${p.emoji}</div>`;
@@ -1207,7 +1216,7 @@ function productCard(p) {
     </div>`;
   } else if(p.colors && p.colors.length > 0) {
     const selColor = selectedColors[p.id] || p.colors[0];
-    const cleanColors = p.colors.map(c => c.replace(/[{}\[\]'"]/g,'').trim()).filter(Boolean);
+    const cleanColors = p.colors.map(c => sd(c.replace(/[{}\[\]'"]/g,'').trim())).filter(Boolean);
     colorHtml = `<div style="margin-bottom:10px;">
       <div style="font-size:11px;font-weight:700;color:var(--text-light);margin-bottom:5px;letter-spacing:0.04em;">ЦВЯТ:</div>
       <div style="display:flex;flex-wrap:wrap;gap:5px;">
@@ -1219,10 +1228,10 @@ function productCard(p) {
   }
 
   const descHtml = p.desc
-    ? `<div style="font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:8px;">${p.desc}</div>`
+    ? `<div style="font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:8px;">${safeDesc}</div>`
     : '';
   const matHtml = p.material
-    ? `<div style="font-size:11px;color:var(--text-mid);margin-bottom:6px;">&#x1F9F5; ${p.material}</div>`
+    ? `<div style="font-size:11px;color:var(--text-mid);margin-bottom:6px;">&#x1F9F5; ${safeMat}</div>`
     : '';
 
   // Наличност индикатор
@@ -1252,8 +1261,8 @@ function productCard(p) {
     ${badge}
     ${imgHtml}
     <div class="product-info">
-      <div class="cat-tag">${catName(p.cat)}</div>
-      <h4>${p.name}</h4>
+      <div class="cat-tag">${sd(catName(p.cat))}</div>
+      <h4>${sd(p.name)}</h4>
       ${descHtml}
       ${matHtml}
       ${stockHtml}
@@ -1457,13 +1466,7 @@ async function confirmOrder() {
     return;
   }
 
-  // Rate limiting - max 3 orders per email per session
-  const orderKey = 'rm_orders_' + email.toLowerCase();
-  const orderCount = parseInt(sessionStorage.getItem(orderKey) || '0');
-  if(orderCount >= 3) {
-    alert('Достигнат е максималният брой поръчки за тази сесия. Моля свържете се с нас директно.');
-    return;
-  }
+  // Rate limiting се прави на сървъра чрез check_rate_limit() функция
 
   const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
   const itemsList = cart.map(i => i.name + (i.size?' ('+i.size+')':'') + (i.color?' - '+i.color:'') + ' x'+i.qty+' = '+(i.price*i.qty).toFixed(2)+' EUR').join('\n');
@@ -1474,38 +1477,58 @@ async function confirmOrder() {
   if(btn) { btn.disabled = true; btn.textContent = '⏳ Изпращане...'; }
 
   let savedToDb = false;
-  let orderData = {
+  const orderData = {
     customer_name: name, email, phone, city,
-    items: cart.map(i => ({name:i.name, size:i.size, color:i.color, price:i.price, qty:i.qty})),
+    items: cart.map(i => ({
+      id: i.id, name: i.name, size: i.size || null,
+      color: i.color || null, price: i.price, qty: i.qty
+    })),
     total: parseFloat(total.toFixed(2)),
-    status: 'pending',
     note: note || null
   };
 
-  // 1. Запази в Supabase
+  // 1. Сървърна rate limiting проверка (не sessionStorage!)
   if(sbShop) {
     try {
-      const { data, error } = await sbShop.from('orders').insert([orderData]).select().single();
-      if(error) console.error('Supabase грешка:', error.message);
-      else {
-        savedToDb = true;
-        console.log('Поръчка записана в Supabase, ID:', data.id);
-
-        // Намали наличността за всеки продукт в поръчката
-        for(const item of cart) {
-          const prod = PRODUCTS.find(p => String(p.id) === String(item.id));
-          if(!prod) continue;
-          const newQty = Math.max(0, (prod.qty || 0) - item.qty);
-          const { error: qErr } = await sbShop
-            .from('products')
-            .update({ qty: newQty })
-            .eq('id', item.id);
-          if(!qErr) {
-            prod.qty = newQty;
-            console.log('Наличност намалена:', prod.name, '->', newQty);
-          }
-        }
+      const { data: rlData } = await sbShop.rpc('check_rate_limit', {
+        p_email: email.toLowerCase(),
+        p_action: 'order',
+        p_max_count: 3,
+        p_window_hours: 24
+      });
+      if(rlData === false) {
+        alert('Достигнат е максималният брой поръчки (3 за 24 часа). Свържете се с нас директно.');
+        if(btn) { btn.disabled = false; btn.textContent = 'Потвърди поръчката'; }
+        return;
       }
+    } catch(e) { console.warn('Rate limit check failed:', e.message); }
+  }
+
+  // 2. Запази поръчката И намали наличността чрез сигурна сървърна функция
+  // place_order() проверява наличността на сървъра — клиентът НЕ може да манипулира qty!
+  if(sbShop) {
+    try {
+      const { data, error } = await sbShop.rpc('place_order', {
+        order_data: orderData
+      });
+      if(error) {
+        console.error('Supabase грешка:', error.message);
+        alert('Грешка при поръчката: ' + error.message);
+        if(btn) { btn.disabled = false; btn.textContent = 'Потвърди поръчката'; }
+        return;
+      }
+      if(data && data.success === false) {
+        alert('Грешка: ' + (data.error || 'Неуспешна поръчка'));
+        if(btn) { btn.disabled = false; btn.textContent = 'Потвърди поръчката'; }
+        return;
+      }
+      savedToDb = true;
+      console.log('Поръчка записана успешно, ID:', data && data.order_id);
+      // Обнови локалните наличности
+      cart.forEach(item => {
+        const prod = PRODUCTS.find(p => String(p.id) === String(item.id));
+        if(prod) prod.qty = Math.max(0, (prod.qty || 0) - item.qty);
+      });
     } catch(e) { console.error('Supabase exception:', e.message); }
   }
 
@@ -1541,10 +1564,6 @@ async function confirmOrder() {
   }
 
   // 3. Покажи успех
-  // Update rate limit counter
-  const orderKeyFinal = 'rm_orders_' + email.toLowerCase();
-  sessionStorage.setItem(orderKeyFinal, String(parseInt(sessionStorage.getItem(orderKeyFinal) || '0') + 1));
-
   document.getElementById('order-modal').style.display = 'none';
   document.getElementById('success-modal').style.display = 'flex';
   cart = [];
@@ -1630,7 +1649,7 @@ function declineCookies() {
 // Постави URL на снимката тук (от Supabase Storage или друг публичен линк):
 // Например: 'https://xxxxx.supabase.co/storage/v1/object/public/product-images/hero.jpg'
 // Остави '' ако не искаш снимка
-const HERO_IMAGE_URL = 'https://qewdtgmycenrqfaretmx.supabase.co/storage/v1/object/public/product-images/products/1776615034584.jpg';
+const HERO_IMAGE_URL = '';
 
 function changeHero(e) {
   const file = e.target.files[0];
@@ -1771,7 +1790,7 @@ initCookieBanner();
 
     <div class="terms-section">
       <h3>1. За нас</h3>
-      <p>Роза-Мимоза магазин е авторски онлайн магазин за ръчно изработени  цветя и декорации за скрапбукинг. Всеки продукт е изработен индивидуално с внимание към детайла.</p>
+      <p>Роза-Мимоза магазин е авторски онлайн магазин за ръчно изработени тъкани цветя и декорации за скрапбукинг. Всеки продукт е изработен индивидуално с внимание към детайла.</p>
       <p>Контакт: <a href="mailto:mariana99jordan@gmail.com" style="color:var(--rose);">mariana99jordan@gmail.com</a> &nbsp;|&nbsp; <a href="https://www.facebook.com/share/1GTHzsR8YT/" target="_blank" style="color:var(--rose);">Facebook страница</a></p>
     </div>
 
