@@ -735,17 +735,9 @@
 </header>
 
 <!-- Navigation -->
-<nav>
+<nav id="main-nav">
   <a href="#" class="active" onclick="filterCat('all',this)">Всички</a>
-  <a href="#" onclick="filterCat('rozi',this)">🌹 Рози</a>
-  <a href="#" onclick="filterCat('gardenii',this)">🤍 Гардении</a>
-  <a href="#" onclick="filterCat('koleda',this)">⭐ Коледни звезди</a>
-  <a href="#" onclick="filterCat('bozuri',this)">🌸 Божури</a>
-  <a href="#" onclick="filterCat('pelargoniu',this)">🌺 Обикновени цветя</a>
-  <a href="#" onclick="filterCat('malki',this)">🌼 Малки цветя</a>
-  <a href="#" onclick="filterCat('kolektsii',this)">💐 Колекции</a>
-  <a href="#" onclick="filterCat('spetsialni',this)">✨ Специални</a>
-  <a href="#" onclick="filterCat('lista',this)">🍃 Листа</a>
+  <!-- категориите се зареждат динамично от Supabase -->
 </nav>
 
 <!-- Hero Banner -->
@@ -807,17 +799,9 @@
 
 <!-- Categories -->
 <div class="categories">
-  <div class="cat-grid">
+  <div class="cat-grid" id="cat-grid">
     <div class="cat-pill active" onclick="filterCat('all',this)"><span class="emoji">🌺</span> Всички</div>
-    <div class="cat-pill" onclick="filterCat('rozi',this)"><span class="emoji">🌹</span> Рози</div>
-    <div class="cat-pill" onclick="filterCat('gardenii',this)"><span class="emoji">🤍</span> Гардении</div>
-    <div class="cat-pill" onclick="filterCat('koleda',this)"><span class="emoji">⭐</span> Коледни звезди</div>
-    <div class="cat-pill" onclick="filterCat('bozuri',this)"><span class="emoji">🌸</span> Божури</div>
-    <div class="cat-pill" onclick="filterCat('pelargoniu',this)"><span class="emoji">🌺</span> Обикновени цветя</div>
-    <div class="cat-pill" onclick="filterCat('malki',this)"><span class="emoji">🌼</span> Малки цветя</div>
-    <div class="cat-pill" onclick="filterCat('kolektsii',this)"><span class="emoji">💐</span> Колекции</div>
-    <div class="cat-pill" onclick="filterCat('spetsialni',this)"><span class="emoji">✨</span> Специални</div>
-    <div class="cat-pill" onclick="filterCat('lista',this)"><span class="emoji">🍃</span> Листа</div>
+    <!-- категориите се зареждат динамично от Supabase -->
   </div>
 </div>
 
@@ -958,15 +942,9 @@
     </div>
     <div>
       <h5>Категории</h5>
-      <a href="#" onclick="footerCat('rozi');return false;">🌹 Рози</a>
-      <a href="#" onclick="footerCat('gardenii');return false;">🤍 Гардении</a>
-      <a href="#" onclick="footerCat('koleda');return false;">⭐ Коледни звезди</a>
-      <a href="#" onclick="footerCat('bozuri');return false;">🌸 Божури</a>
-      <a href="#" onclick="footerCat('pelargoniu');return false;">🌺 Обикновени цветя</a>
-      <a href="#" onclick="footerCat('malki');return false;">🌼 Малки цветя</a>
-      <a href="#" onclick="footerCat('kolektsii');return false;">💐 Колекции</a>
-      <a href="#" onclick="footerCat('spetsialni');return false;">✨ Специални</a>
-      <a href="#" onclick="footerCat('lista');return false;">🍃 Листа</a>
+      <div id="footer-cats">
+        <!-- зарежда се динамично -->
+      </div>
     </div>
     <div>
       <h5>Информация</h5>
@@ -1158,19 +1136,6 @@ function footerCat(cat) {
   }, 400);
 }
 
-function filterCat(cat, el) {
-  currentCat = cat;
-  document.querySelectorAll('nav a, .cat-pill').forEach(e => e.classList.remove('active'));
-  if(el) el.classList.add('active');
-  const titles = {
-    'all':'Всички продукти','rozi':'🌹 Рози','gardenii':'🤍 Гардении',
-    'koleda':'⭐ Коледни звезди','bozuri':'🌸 Божури','pelargoniu':'🌺 Обикновени цветя',
-    'malki':'🌼 Малки цветя','kolektsii':'💐 Колекции',
-    'spetsialni':'✨ Специални','lista':'🍃 Листа'
-  };
-  document.getElementById('section-title').textContent = titles[cat] || 'Продукти';
-  renderProducts();
-}
 
 function renderProducts() {
   const grid = document.getElementById('product-grid');
@@ -1276,11 +1241,94 @@ function productCard(p) {
   </div>`;
 }
 
+// ── КАТЕГОРИИ (динамични от Supabase) ────────────────
+// Резервни категории ако Supabase не е наличен
+let CATS_MAP = {
+  'rozi':'Рози','gardenii':'Гардении','koleda':'Коледни звезди',
+  'bozuri':'Божури','pelargoniu':'Обикновени цветя',
+  'malki':'Малки цветя','kolektsii':'Колекции',
+  'spetsialni':'Специални','lista':'Листа'
+};
+let CATS_LIST = []; // [{slug, name, emoji}]
+
 function catName(cat) {
-  const m = {'rozi':'Рози','gardenii':'Гардении','koleda':'Коледни звезди',
-    'bozuri':'Божури','pelargoniu':'Обикновени цветя',
-    'malki':'Малки цветя','kolektsii':'Колекции','spetsialni':'Специални','lista':'Листа'};
-  return m[cat] || cat;
+  return CATS_MAP[cat] || cat;
+}
+
+function buildNavAndPills() {
+  // Nav
+  const nav = document.getElementById('main-nav');
+  if(nav) {
+    // Запази "Всички" линка, изтрий останалите
+    const allLink = nav.querySelector('a');
+    nav.innerHTML = '';
+    if(allLink) nav.appendChild(allLink);
+    CATS_LIST.forEach(cat => {
+      const a = document.createElement('a');
+      a.href = '#';
+      a.textContent = (cat.emoji || '') + ' ' + cat.name;
+      a.onclick = (e) => { e.preventDefault(); filterCat(cat.slug, a); };
+      nav.appendChild(a);
+    });
+  }
+
+  // Pills
+  const grid = document.getElementById('cat-grid');
+  if(grid) {
+    const allPill = grid.querySelector('.cat-pill');
+    grid.innerHTML = '';
+    if(allPill) grid.appendChild(allPill);
+    CATS_LIST.forEach(cat => {
+      const div = document.createElement('div');
+      div.className = 'cat-pill';
+      div.innerHTML = `<span class="emoji">${cat.emoji || '🌸'}</span> ${cat.name}`;
+      div.onclick = () => filterCat(cat.slug, div);
+      grid.appendChild(div);
+    });
+  }
+
+  // Footer
+  const footer = document.getElementById('footer-cats');
+  if(footer) {
+    footer.innerHTML = CATS_LIST.map(cat =>
+      `<a href="#" onclick="footerCat('${cat.slug}');return false;">${cat.emoji || '🌸'} ${cat.name}</a>`
+    ).join('');
+  }
+}
+
+async function loadCategoriesFromDB() {
+  if(!sbShop) { buildNavAndPills(); return; }
+  try {
+    const { data, error } = await sbShop
+      .from('categories')
+      .select('slug, name, emoji, sort_order')
+      .eq('visible', true)
+      .order('sort_order')
+      .order('name');
+    if(!error && data && data.length > 0) {
+      CATS_LIST = data;
+      CATS_MAP = {};
+      data.forEach(c => { CATS_MAP[c.slug] = c.name; });
+    } else {
+      // Резервни категории
+      CATS_LIST = Object.entries(CATS_MAP).map(([slug, name], i) => ({slug, name, emoji:'🌸', sort_order: i+1}));
+    }
+  } catch(e) {
+    CATS_LIST = Object.entries(CATS_MAP).map(([slug, name], i) => ({slug, name, emoji:'🌸', sort_order: i+1}));
+  }
+  buildNavAndPills();
+}
+
+function filterCat(cat, el) {
+  currentCat = cat;
+  document.querySelectorAll('nav a, .cat-pill').forEach(e => e.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const found = CATS_LIST.find(c => c.slug === cat);
+  const title = cat === 'all' ? 'Всички продукти'
+    : found ? (found.emoji || '') + ' ' + found.name
+    : catName(cat);
+  document.getElementById('section-title').textContent = title;
+  renderProducts();
 }
 
 function selectSize(id, size, btn) {
@@ -1647,9 +1695,9 @@ function declineCookies() {
 
 // ── ШАПКА СНИМКА ─────────────────────────────────────
 // Постави URL на снимката тук (от Supabase Storage или друг публичен линк):
-// Например: 'https://qewdtgmycenrqfaretmx.supabase.co/storage/v1/object/public/product-images/products/1776615034584.jpg'
+// Например: 'https://xxxxx.supabase.co/storage/v1/object/public/product-images/hero.jpg'
 // Остави '' ако не искаш снимка
-const HERO_IMAGE_URL = 'https://qewdtgmycenrqfaretmx.supabase.co/storage/v1/object/public/product-images/products/1776615034584.jpg';
+const HERO_IMAGE_URL = '';
 
 function changeHero(e) {
   const file = e.target.files[0];
@@ -1671,9 +1719,14 @@ function applyHeroImage(url) {
   children.forEach(c => { if(c.tagName !== 'DIV') c.remove(); });
 }
 (function() {
-  // Първо опитай константата в кода
+  // 1. Първо опитай константата в кода (ръчен линк)
   if(HERO_IMAGE_URL) { applyHeroImage(HERO_IMAGE_URL); return; }
-  // После опитай localStorage
+  // 2. После линк записан от админ панела
+  try {
+    const adminUrl = localStorage.getItem('rm_hero_url');
+    if(adminUrl) { applyHeroImage(adminUrl); return; }
+  } catch(e) {}
+  // 3. Накрая стар localStorage запис (качена снимка)
   try {
     const saved = localStorage.getItem('rm_hero_img');
     if(saved) applyHeroImage(saved);
@@ -1736,8 +1789,11 @@ async function loadProductsFromDB() {
 }
 
 // Init
-loadProductsFromDB();
-initCookieBanner();
+(async () => {
+  await loadCategoriesFromDB();  // първо категории
+  await loadProductsFromDB();    // после продукти
+  initCookieBanner();
+})();
 </script>
 
 <!-- LIGHTBOX -->

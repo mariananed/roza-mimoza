@@ -590,6 +590,31 @@
       <div style="max-width:540px;">
         <div class="sec-header" style="margin-bottom:20px;"><h2>Настройки на магазина</h2></div>
 
+        <!-- HERO IMAGE SECTION -->
+        <div class="table-wrap" style="padding:20px;margin-bottom:20px;">
+          <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--text-dark);margin-bottom:10px;">🖼️ Снимка в шапката на магазина</h3>
+          <p style="font-size:13px;color:var(--text-mid);margin-bottom:14px;line-height:1.6;">
+            Постави линк на снимка от Supabase Storage или друг публичен URL. Линкът се записва в браузъра и се зарежда автоматично при отваряне на магазина.
+          </p>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+            <input id="hero-url-input" type="url"
+              placeholder="https://xxxxx.supabase.co/storage/v1/object/public/..."
+              style="flex:1;min-width:260px;border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Lato',sans-serif;color:var(--text-dark);outline:none;">
+            <button class="btn btn-primary btn-sm" onclick="saveHeroUrl()">💾 Запази линка</button>
+            <button class="btn btn-outline btn-sm" onclick="clearHeroUrl()">✕ Изчисти</button>
+          </div>
+          <div id="hero-preview-wrap" style="display:none;margin-top:10px;">
+            <p style="font-size:12px;color:var(--text-mid);margin-bottom:6px;">Преглед:</p>
+            <img id="hero-url-preview" src="" alt="Преглед на шапката"
+              style="width:100%;max-height:140px;object-fit:cover;border-radius:10px;border:1px solid var(--rose-light);">
+          </div>
+          <div id="hero-url-msg" style="display:none;margin-top:10px;border-radius:8px;padding:9px 14px;font-size:13px;"></div>
+          <p style="font-size:11px;color:var(--text-light);margin-top:10px;line-height:1.7;">
+            💡 Можеш също да запишеш линка директно в кода на <strong>index.html</strong> на ред:<br>
+            <code style="background:#f0e8ef;padding:2px 7px;border-radius:5px;font-size:11px;">const HERO_IMAGE_URL = 'твоят-линк-тук';</code>
+          </p>
+        </div>
+
         <!-- BACKUP SECTION -->
         <div class="table-wrap" style="padding:20px;margin-bottom:20px;background:var(--info-light);border:1px solid var(--info);">
           <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--text-dark);margin-bottom:10px;">💾 Архив и възстановяване</h3>
@@ -940,6 +965,7 @@ function showTab(id, el) {
   if(id==='special') renderSpecial();
   if(id==='settings') {
     loadSettings();
+    loadHeroUrlInput();
     const box = document.getElementById('sb-status-box');
     if(box) {
       if(isConfigured()) {
@@ -2215,6 +2241,61 @@ function showCatMsg(text, ok) {
   el.textContent = text;
   clearTimeout(el._t);
   el._t = setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+// ── HERO IMAGE URL (от админа) ────────────────────────
+const HERO_URL_KEY = 'rm_hero_url';
+
+function loadHeroUrlInput() {
+  const saved = localStorage.getItem(HERO_URL_KEY) || '';
+  const input = document.getElementById('hero-url-input');
+  if(input && saved) {
+    input.value = saved;
+    showHeroPreview(saved);
+  }
+}
+
+function saveHeroUrl() {
+  const input = document.getElementById('hero-url-input');
+  const url = input ? input.value.trim() : '';
+  if(!url) { showHeroUrlMsg('❌ Въведи линк на снимката.', false); return; }
+  if(!url.startsWith('http')) { showHeroUrlMsg('❌ Линкът трябва да започва с https://', false); return; }
+  localStorage.setItem(HERO_URL_KEY, url);
+  showHeroPreview(url);
+  showHeroUrlMsg('✅ Линкът е запазен! При следващото отваряне на магазина снимката ще се зареди автоматично.', true);
+}
+
+function clearHeroUrl() {
+  localStorage.removeItem(HERO_URL_KEY);
+  const input = document.getElementById('hero-url-input');
+  if(input) input.value = '';
+  const wrap = document.getElementById('hero-preview-wrap');
+  if(wrap) wrap.style.display = 'none';
+  showHeroUrlMsg('🗑️ Снимката на шапката е изчистена.', true);
+}
+
+function showHeroPreview(url) {
+  const wrap = document.getElementById('hero-preview-wrap');
+  const img = document.getElementById('hero-url-preview');
+  if(!wrap || !img || !url) return;
+  img.src = url;
+  img.onerror = () => {
+    wrap.style.display = 'none';
+    showHeroUrlMsg('⚠️ Линкът не зарежда снимка — провери дали е публичен.', false);
+  };
+  img.onload = () => { wrap.style.display = 'block'; };
+}
+
+function showHeroUrlMsg(text, ok) {
+  const el = document.getElementById('hero-url-msg');
+  if(!el) return;
+  el.style.display = 'block';
+  el.style.background = ok ? 'var(--success-light)' : 'var(--danger-light)';
+  el.style.color = ok ? 'var(--success)' : 'var(--danger)';
+  el.style.border = '1px solid ' + (ok ? '#A8D5B5' : '#F5B3B3');
+  el.textContent = text;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.display = 'none'; }, 5000);
 }
 
 // ── INIT ──────────────────────────────────────────────
