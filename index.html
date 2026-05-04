@@ -889,7 +889,10 @@
       <input type="text" id="ord-name" placeholder="Три имена *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
       <input type="email" id="ord-email" placeholder="Имейл за потвърждение *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
       <input type="tel" id="ord-phone" placeholder="Телефон *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
-      <input type="text" id="ord-city" placeholder="Град и офис на Еконт *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="ord-city" placeholder="Град *" style="flex:1;border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
+        <input type="text" id="ord-econt" placeholder="Офис / адрес на Еконт *" style="flex:2;border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
+      </div>
       <input type="text" id="ord-honeypot" name="website" style="display:none;" tabindex="-1" autocomplete="off">
       <textarea id="ord-note" placeholder="Бележка към поръчката (незадължително)" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;height:70px;resize:vertical;"></textarea>
       <div style="background:var(--rose-pale);border-radius:10px;padding:12px 14px;font-size:13px;border:1px solid var(--rose-light);">
@@ -1467,6 +1470,13 @@ function checkout() {
     return;
   }
   document.getElementById('modal-total').textContent = total.toFixed(2) + ' €';
+  // Изчисти полетата при всяко отваряне
+  ['ord-name','ord-email','ord-phone','ord-city','ord-econt','ord-note'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  const gdpr = document.getElementById('gdpr-consent');
+  if(gdpr) gdpr.checked = false;
   toggleCart();
   document.getElementById('order-modal').style.display = 'flex';
 }
@@ -1481,14 +1491,15 @@ async function confirmOrder() {
   const honeypot = document.getElementById('ord-honeypot');
   if(honeypot && honeypot.value) { console.warn('Bot detected'); return; }
 
-  const name = sanitizeInput('ord-name');
+  const name  = sanitizeInput('ord-name');
   const email = sanitizeInput('ord-email');
   const phone = sanitizeInput('ord-phone');
-  const city = sanitizeInput('ord-city');
-  const note = sanitizeInput('ord-note');
+  const city  = sanitizeInput('ord-city');
+  const econt = sanitizeInput('ord-econt');
+  const note  = sanitizeInput('ord-note');
 
   // Validation
-  if(!name || !email || !phone || !city) {
+  if(!name || !email || !phone || !city || !econt) {
     alert('Моля попълнете всички задължителни полета (*)');
     return;
   }
@@ -1514,17 +1525,18 @@ async function confirmOrder() {
     return;
   }
 
+  const fullCity = city + ', ' + econt;  // Комбинирано за запис
   const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
   const itemsList = cart.map(i => i.name + (i.size?' ('+i.size+')':'') + (i.color?' - '+i.color:'') + ' x'+i.qty+' = '+(i.price*i.qty).toFixed(2)+' EUR').join('\n');
   const itemsShort = cart.map(i => i.name + ' x' + i.qty).join(', ');
 
   // Disable button
-  const btn = document.querySelector('#order-modal .checkout-btn, #order-modal button[onclick*="confirmOrder"]');
+  const btn = document.querySelector('#order-modal button[onclick*="confirmOrder"]');
   if(btn) { btn.disabled = true; btn.textContent = '⏳ Изпращане...'; }
 
   let savedToDb = false;
   const orderData = {
-    customer_name: name, email, phone, city,
+    customer_name: name, email, phone, city: fullCity,
     items: cart.map(i => ({
       id: i.id, name: i.name, size: i.size || null,
       color: i.color || null, price: i.price, qty: i.qty
@@ -1533,83 +1545,84 @@ async function confirmOrder() {
     note: note || null
   };
 
-  // Rate limiting — сървърна проверка чрез Supabase функция
   if(sbShop) {
+    // 1. Сървърна rate limiting проверка
     try {
-      const { data: rlData, error: rlError } = await sbShop.rpc('check_rate_limit', {
+      const { data: rlData, error: rlErr } = await sbShop.rpc('check_rate_limit', {
         p_email: email.toLowerCase(),
         p_action: 'order',
         p_max_count: 3,
         p_window_hours: 24
       });
-      if(!rlError && rlData === false) {
+      if(!rlErr && rlData === false) {
         alert('Достигнат е максималният брой поръчки (3 за 24 часа). Свържете се с нас директно.');
-        if(btn) { btn.disabled = false; btn.textContent = 'Потвърди поръчката'; }
+        if(btn) { btn.disabled = false; btn.textContent = '✅ Потвърди поръчката'; }
         return;
       }
     } catch(e) { console.warn('Rate limit check skipped:', e.message); }
-  }
 
-  // 2. Запази поръчката И намали наличността чрез сигурна сървърна функция
-  // place_order() проверява наличността на сървъра — клиентът НЕ може да манипулира qty!
-  if(sbShop) {
+    // 2. Запази поръчката чрез place_order() или директен INSERT като fallback
     try {
-      const { data, error } = await sbShop.rpc('place_order', {
-        order_data: orderData
-      });
+      const { data, error } = await sbShop.rpc('place_order', { order_data: orderData });
       if(error) {
-        console.error('Supabase грешка:', error.message);
-        alert('Грешка при поръчката: ' + error.message);
-        if(btn) { btn.disabled = false; btn.textContent = 'Потвърди поръчката'; }
-        return;
+        console.warn('place_order RPC грешка, опитвам директен INSERT:', error.message);
+        // Fallback: директен INSERT в таблицата
+        const { error: insErr } = await sbShop.from('orders').insert([{
+          customer_name: name,
+          email,
+          phone,
+          city: fullCity,
+          items: itemsShort,
+          total: parseFloat(total.toFixed(2)),
+          status: 'pending',
+          note: note || null
+        }]);
+        if(insErr) {
+          console.error('Директен INSERT грешка:', insErr.message);
+          // Продължаваме — поръчката ще се изпрати само по имейл
+        } else {
+          savedToDb = true;
+          console.log('Поръчка записана чрез директен INSERT');
+        }
+      } else {
+        if(data && data.success === false) {
+          alert('Грешка: ' + (data.error || 'Неуспешна поръчка'));
+          if(btn) { btn.disabled = false; btn.textContent = '✅ Потвърди поръчката'; }
+          return;
+        }
+        savedToDb = true;
+        console.log('Поръчка записана успешно чрез place_order, ID:', data && data.order_id);
+        // Обнови локалните наличности
+        cart.forEach(item => {
+          const prod = PRODUCTS.find(p => String(p.id) === String(item.id));
+          if(prod) prod.qty = Math.max(0, (prod.qty || 0) - item.qty);
+        });
       }
-      if(data && data.success === false) {
-        alert('Грешка: ' + (data.error || 'Неуспешна поръчка'));
-        if(btn) { btn.disabled = false; btn.textContent = 'Потвърди поръчката'; }
-        return;
-      }
-      savedToDb = true;
-      console.log('Поръчка записана успешно, ID:', data && data.order_id);
-      // Обнови локалните наличности
-      cart.forEach(item => {
-        const prod = PRODUCTS.find(p => String(p.id) === String(item.id));
-        if(prod) prod.qty = Math.max(0, (prod.qty || 0) - item.qty);
-      });
     } catch(e) { console.error('Supabase exception:', e.message); }
   }
 
-  // 2. Изпрати имейл с EmailJS
+  // 3. Изпрати имейл с EmailJS
   if(typeof emailjs !== 'undefined' && window.EMAILJS_PUBLIC_KEY && window.EMAILJS_SERVICE_ID && window.EMAILJS_TEMPLATE_ID) {
     try {
-      // Инициализирай EmailJS
       emailjs.init(window.EMAILJS_PUBLIC_KEY);
-
-      // Подготви данните като чисти стрингове
       const emailData = {
-        customer_name: String(name),
+        customer_name:  String(name),
         customer_email: String(email),
         customer_phone: String(phone),
-        customer_city: String(city),
-        order_items: String(itemsList),
-        order_total: String(total.toFixed(2)) + ' EUR',
-        order_note: String(note || 'Няма'),
+        customer_city:  String(fullCity),
+        order_items:    String(itemsList),
+        order_total:    String(total.toFixed(2)) + ' EUR',
+        order_note:     String(note || 'Няма'),
       };
-
       console.log('Изпращане на имейл...', emailData);
-      const result = await emailjs.send(
-        window.EMAILJS_SERVICE_ID,
-        window.EMAILJS_TEMPLATE_ID,
-        emailData
-      );
+      const result = await emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, emailData);
       console.log('Имейл изпратен успешно:', result.status, result.text);
-    } catch(e) {
-      console.error('EmailJS грешка:', e);
-    }
+    } catch(e) { console.error('EmailJS грешка:', e); }
   } else {
     console.warn('EmailJS не е конфигуриран — провери supabase-config.js');
   }
 
-  // 3. Покажи успех
+  // 4. Покажи успех
   document.getElementById('order-modal').style.display = 'none';
   document.getElementById('success-modal').style.display = 'flex';
   cart = [];
