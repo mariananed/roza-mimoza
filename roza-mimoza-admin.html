@@ -642,6 +642,40 @@
           </p>
         </div>
 
+        <!-- LEGAL & CONTACTS SECTION -->
+        <div class="sec-header" style="margin:28px 0 16px;"><h2>📋 Общи условия и Контакти</h2></div>
+        <div class="table-wrap" style="padding:20px;margin-bottom:20px;">
+          <p style="font-size:13px;color:var(--text-mid);margin-bottom:16px;line-height:1.6;">
+            Текстовете по-долу се показват автоматично в раздел <strong>Общи условия</strong> на магазина. Записват се в браузъра — не е нужно да редактираш кода.
+          </p>
+
+          <div class="form-group">
+            <label>🏢 Данни за фирмата</label>
+            <p style="font-size:11px;color:var(--text-light);margin-bottom:6px;">Наименование, ЕИК, седалище и адрес на управление</p>
+            <textarea id="set-company-info" rows="4"
+              style="width:100%;border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Lato',sans-serif;resize:vertical;outline:none;"
+              placeholder="Пример:&#10;ЕТ Мариана Йорданова&#10;ЕИК: 123456789&#10;Седалище: гр. Варна&#10;Адрес на управление: гр. Варна, ул. Роза 1"></textarea>
+          </div>
+
+          <div class="form-group" style="margin-top:14px;">
+            <label>📞 Връзка с мен</label>
+            <p style="font-size:11px;color:var(--text-light);margin-bottom:6px;">Телефон, имейл и Facebook — показва се в раздел „За нас"</p>
+            <textarea id="set-contact-info" rows="3"
+              style="width:100%;border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Lato',sans-serif;resize:vertical;outline:none;"
+              placeholder="Пример:&#10;📞 +359 88 123 4567&#10;✉️ mariana@example.com&#10;💬 facebook.com/rozamimoza"></textarea>
+          </div>
+
+          <div class="form-group" style="margin-top:14px;">
+            <label>💡 ДДС статус</label>
+            <input id="set-vat-status" type="text"
+              style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Lato',sans-serif;width:100%;outline:none;"
+              placeholder="Фирмата не е регистрирана по ЗДДС. Цените са крайни и включват всички данъци.">
+          </div>
+
+          <div id="legal-msg" style="display:none;border-radius:8px;padding:9px 14px;font-size:13px;margin-top:10px;"></div>
+          <button class="btn btn-primary" style="margin-top:14px;" onclick="saveLegalSettings()">💾 Запази текстовете</button>
+        </div>
+
         <!-- BACKUP SECTION -->
         <div class="table-wrap" style="padding:20px;margin-bottom:20px;background:var(--info-light);border:1px solid var(--info);">
           <h3 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--text-dark);margin-bottom:10px;">💾 Архив и възстановяване</h3>
@@ -1015,6 +1049,7 @@ function showTab(id, el) {
   if(id==='settings') {
     loadSettings();
     loadHeroUrlInput();
+    loadLegalSettings();
     const box = document.getElementById('sb-status-box');
     if(box) {
       if(isConfigured()) {
@@ -1229,13 +1264,13 @@ async function changeOrderStatus(id, status) {
 }
 
 async function deleteOrder(id) {
-  const o = orders.find(x => x.id === id);
+  const o = orders.find(x => String(x.id) === String(id));
   if(!confirm(`Изтриване на поръчка #${id} (${o?.name || ''})?\n\nТова действие е необратимо.`)) return;
   if(isConfigured()) {
     const { error } = await sb.from('orders').delete().eq('id', id);
     if(error) { showError('Грешка: ' + error.message); return; }
   }
-  orders = orders.filter(o => o.id !== id);
+  orders = orders.filter(x => String(x.id) !== String(id));
   renderOrders(); renderDashboard();
 }
 
@@ -1825,13 +1860,12 @@ function createOrderFromSpecial(id) {
   const s = specialOrders.find(x => String(x.id) === String(id));
   if(!s) return;
 
-  // Попълни модала за ръчна поръчка с данните от запитването
   document.getElementById('om-name').value  = s.name  || '';
   document.getElementById('om-phone').value = s.phone || s.viber || '';
   document.getElementById('om-email').value = s.email || '';
   document.getElementById('om-city').value  = '';
   document.getElementById('om-items').value = (s.cat ? s.cat + ': ' : '') + (s.desc || '');
-  document.getElementById('om-total').value = '';
+  document.getElementById('om-total').value = '';   // въвежда се ръчно
   document.getElementById('om-note').value  = [
     s.phone     ? '📞 ' + s.phone     : '',
     s.viber     ? '📱 ' + s.viber     : '',
@@ -1839,19 +1873,17 @@ function createOrderFromSpecial(id) {
   ].filter(Boolean).join(' | ') || '';
   document.getElementById('om-status').value = 'pending';
 
-  // Нулирай модала като "нова поръчка"
   const modal = document.getElementById('order-modal');
   delete modal.dataset.editId;
   const title = modal.querySelector('h2, h3');
-  if(title) title.textContent = '➕ Нова поръчка от специално запитване';
-  const saveBtn = modal.querySelector('button[onclick*="saveOrder"], button[onclick*="updateOrder"]');
+  if(title) title.textContent = '➕ Поръчка от специално запитване';
+  // Задължително намираме бутона Запази и го свързваме с saveOrder
+  const saveBtn = modal.querySelector('button.btn-primary');
   if(saveBtn) { saveBtn.textContent = '✅ Създай поръчката'; saveBtn.setAttribute('onclick','saveOrder()'); }
 
-  // Смени таба на Поръчки и отвори модала
   showTab('orders', document.querySelector('.nav-item[onclick*="orders"]'));
   setTimeout(() => { modal.classList.add('open'); }, 150);
 
-  // Маркирай специалната поръчка като "приета" автоматично
   changeSpecialStatus(id, 'accepted');
 }
 
@@ -2601,6 +2633,41 @@ function showHeroUrlMsg(text, ok) {
   el.textContent = text;
   clearTimeout(el._t);
   el._t = setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+// ── LEGAL SETTINGS ───────────────────────────────────
+const LEGAL_KEY = 'rm_legal_settings';
+
+function loadLegalSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LEGAL_KEY) || '{}');
+    if(document.getElementById('set-company-info')) document.getElementById('set-company-info').value = s.company_info || '';
+    if(document.getElementById('set-contact-info')) document.getElementById('set-contact-info').value = s.contact_info || '';
+    if(document.getElementById('set-vat-status'))   document.getElementById('set-vat-status').value   = s.vat_status   || '';
+  } catch(e) {}
+}
+
+function saveLegalSettings() {
+  try {
+    const settings = {
+      company_info: (document.getElementById('set-company-info')?.value || '').trim(),
+      contact_info: (document.getElementById('set-contact-info')?.value || '').trim(),
+      vat_status:   (document.getElementById('set-vat-status')?.value   || '').trim(),
+    };
+    localStorage.setItem(LEGAL_KEY, JSON.stringify(settings));
+    const msg = document.getElementById('legal-msg');
+    if(msg) {
+      msg.style.display = 'block';
+      msg.style.background = 'var(--success-light)';
+      msg.style.color = 'var(--success)';
+      msg.style.border = '1px solid #A8D5B5';
+      msg.textContent = '✅ Текстовете са запазени и ще се покажат в магазина при следващо отваряне.';
+      clearTimeout(msg._t);
+      msg._t = setTimeout(() => { msg.style.display = 'none'; }, 4000);
+    }
+  } catch(e) {
+    alert('Грешка при запазване: ' + e.message);
+  }
 }
 
 // ── INIT ──────────────────────────────────────────────

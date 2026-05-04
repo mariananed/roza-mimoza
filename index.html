@@ -353,6 +353,7 @@
     font-family: 'Playfair Display', serif;
   }
   .price span { font-size: 12px; font-weight: 300; color: var(--text-light); }
+  .price .price-bgn { font-size: 18px; font-weight: 700; color: var(--rose); font-family: 'Playfair Display', serif; }
 
   .size-selector {
     display: flex;
@@ -1169,9 +1170,9 @@ function productCard(p) {
       ).join('')}
     </div>`;
     const currentPrice = (sizes[sel] || sizes[defaultKey]).price;
-    priceHtml = `<div class="price">${currentPrice.toFixed(2)} €<span>/бр.</span></div>`;
+    priceHtml = `<div class="price">${currentPrice.toFixed(2)} € <span class="price-bgn">(${(currentPrice*1.95583).toFixed(2)} лв.)</span><span>/бр.</span></div>`;
   } else {
-    priceHtml = `<div class="price">${(p.price||0).toFixed(2)} €<span>/бр.</span></div>`;
+    priceHtml = `<div class="price">${(p.price||0).toFixed(2)} € <span class="price-bgn">(${((p.price||0)*1.95583).toFixed(2)} лв.)</span><span>/бр.</span></div>`;
   }
 
   let colorHtml = '';
@@ -1876,10 +1877,16 @@ async function loadProductsFromDB() {
       .terms-highlight { background:var(--rose-pale); border-left:3px solid var(--rose); border-radius:0 8px 8px 0; padding:12px 16px; margin:12px 0; font-size:13px; color:var(--text-dark); line-height:1.7; }
     </style>
 
+    <div class="terms-section" id="terms-company-info">
+      <h3>0. Данни за търговеца</h3>
+      <p id="terms-company-text"><!-- зарежда се от Настройки --></p>
+      <p style="font-size:12px;color:var(--text-light);font-style:italic;" id="terms-vat-text"><!-- зарежда се от Настройки --></p>
+    </div>
+
     <div class="terms-section">
       <h3>1. За нас</h3>
       <p>Роза-Мимоза магазин е авторски онлайн магазин за ръчно изработени тъкани цветя и декорации за скрапбукинг. Всеки продукт е изработен индивидуално с внимание към детайла.</p>
-      <p>Контакт: <a href="mailto:mariana99jordan@gmail.com" style="color:var(--rose);">mariana99jordan@gmail.com</a> &nbsp;|&nbsp; <a href="https://www.facebook.com/share/1GTHzsR8YT/" target="_blank" style="color:var(--rose);">Facebook страница</a></p>
+      <p id="terms-contact-text"><!-- зарежда се от Настройки --></p>
     </div>
 
     <div class="terms-section">
@@ -1958,6 +1965,19 @@ async function loadProductsFromDB() {
       <p>Запазваме правото да актуализираме тези условия. При съществени промени клиентите ще бъдат уведомени по имейл или чрез съобщение на сайта.</p>
     </div>
 
+    <div class="terms-section">
+      <h3>10. Органи за контрол</h3>
+      <p>При спор с търговеца потребителите могат да се обърнат към компетентните органи:</p>
+      <ul>
+        <li><strong>Комисия за защита на потребителите (КЗП)</strong><br>
+          <a href="https://kzp.bg" target="_blank" style="color:var(--rose);">kzp.bg</a> &nbsp;·&nbsp; тел. 0700 111 22</li>
+        <li><strong>Комисия за защита на личните данни (КЗЛД)</strong><br>
+          <a href="https://www.cpdp.bg" target="_blank" style="color:var(--rose);">cpdp.bg</a> &nbsp;·&nbsp; тел. 02 915 3580</li>
+        <li><strong>Платформа за онлайн решаване на спорове (ОРС)</strong><br>
+          <a href="https://ec.europa.eu/consumers/odr" target="_blank" style="color:var(--rose);">ec.europa.eu/consumers/odr</a></li>
+      </ul>
+    </div>
+
     <div style="text-align:center;margin-top:30px;padding-top:20px;border-top:1px solid var(--rose-light);">
       <p style="font-size:12px;color:var(--text-light);margin-bottom:16px;">Последна актуализация: 2025 г. &nbsp;·&nbsp; Роза-Мимоза магазин</p>
       <button onclick="closeTerms()" style="background:var(--rose);color:#fff;border:none;border-radius:24px;padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;">Разбрах — затвори ✕</button>
@@ -1981,6 +2001,20 @@ function closeLightbox() {
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closeLightbox(); });
 
 function showTerms() {
+  // Зареди фирмените данни от localStorage (записани от Настройки в админа)
+  try {
+    const s = JSON.parse(localStorage.getItem('rm_legal_settings') || '{}');
+    const companyEl = document.getElementById('terms-company-text');
+    const vatEl     = document.getElementById('terms-vat-text');
+    const contactEl = document.getElementById('terms-contact-text');
+    if(companyEl) companyEl.innerHTML = s.company_info
+      ? s.company_info.replace(/\n/g,'<br>')
+      : '<em style="color:var(--text-light);">Данните не са попълнени — моля попълни ги в Настройки на админ панела.</em>';
+    if(vatEl) vatEl.textContent = s.vat_status || '💡 Фирмата не е регистрирана по ЗДДС. Цените са крайни и включват всички данъци.';
+    if(contactEl) contactEl.innerHTML = s.contact_info
+      ? s.contact_info.replace(/\n/g,'<br>')
+      : `Контакт: <a href="mailto:mariana99jordan@gmail.com" style="color:var(--rose);">mariana99jordan@gmail.com</a>`;
+  } catch(e) {}
   document.getElementById('terms-overlay').style.display = 'block';
   document.body.style.overflow = 'hidden';
 }
