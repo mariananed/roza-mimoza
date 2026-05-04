@@ -851,7 +851,9 @@
       <p style="font-size:13px;color:var(--text-mid);margin-bottom:12px;line-height:1.6;">Оставете запитване и ще се свържем с вас лично за уточняване на детайлите, срока за изработка и цената.</p>
       <input type="text" id="cf-name" placeholder="Вашето име *">
       <input type="email" id="cf-email" placeholder="Имейл адрес *">
-      <input type="tel" id="cf-phone" placeholder="Телефон / Messenger">
+      <input type="tel" id="cf-phone" placeholder="Телефон (незадължително)">
+      <input type="text" id="cf-viber" placeholder="Viber / WhatsApp номер (незадължително)">
+      <input type="text" id="cf-messenger" placeholder="Messenger (facebook.com/вашето.име) (незадължително)">
       <select id="cf-cat">
         <option value="">— Категория цвете —</option>
         <option>Рози</option>
@@ -889,10 +891,7 @@
       <input type="text" id="ord-name" placeholder="Три имена *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
       <input type="email" id="ord-email" placeholder="Имейл за потвърждение *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
       <input type="tel" id="ord-phone" placeholder="Телефон *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
-      <div style="display:flex;gap:8px;">
-        <input type="text" id="ord-city" placeholder="Град *" style="flex:1;border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
-        <input type="text" id="ord-econt" placeholder="Офис / адрес на Еконт *" style="flex:2;border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
-      </div>
+      <input type="text" id="ord-city" placeholder="Град и офис на Еконт *" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;">
       <input type="text" id="ord-honeypot" name="website" style="display:none;" tabindex="-1" autocomplete="off">
       <textarea id="ord-note" placeholder="Бележка към поръчката (незадължително)" style="border:1px solid var(--rose-light);background:var(--rose-pale);border-radius:10px;padding:11px 14px;font-size:13px;font-family:'Lato',sans-serif;outline:none;height:70px;resize:vertical;"></textarea>
       <div style="background:var(--rose-pale);border-radius:10px;padding:12px 14px;font-size:13px;border:1px solid var(--rose-light);">
@@ -1470,13 +1469,6 @@ function checkout() {
     return;
   }
   document.getElementById('modal-total').textContent = total.toFixed(2) + ' €';
-  // Изчисти полетата при всяко отваряне
-  ['ord-name','ord-email','ord-phone','ord-city','ord-econt','ord-note'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.value = '';
-  });
-  const gdpr = document.getElementById('gdpr-consent');
-  if(gdpr) gdpr.checked = false;
   toggleCart();
   document.getElementById('order-modal').style.display = 'flex';
 }
@@ -1491,15 +1483,14 @@ async function confirmOrder() {
   const honeypot = document.getElementById('ord-honeypot');
   if(honeypot && honeypot.value) { console.warn('Bot detected'); return; }
 
-  const name  = sanitizeInput('ord-name');
+  const name = sanitizeInput('ord-name');
   const email = sanitizeInput('ord-email');
   const phone = sanitizeInput('ord-phone');
-  const city  = sanitizeInput('ord-city');
-  const econt = sanitizeInput('ord-econt');
-  const note  = sanitizeInput('ord-note');
+  const city = sanitizeInput('ord-city');
+  const note = sanitizeInput('ord-note');
 
   // Validation
-  if(!name || !email || !phone || !city || !econt) {
+  if(!name || !email || !phone || !city) {
     alert('Моля попълнете всички задължителни полета (*)');
     return;
   }
@@ -1525,18 +1516,17 @@ async function confirmOrder() {
     return;
   }
 
-  const fullCity = city + ', ' + econt;  // Комбинирано за запис
   const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
   const itemsList = cart.map(i => i.name + (i.size?' ('+i.size+')':'') + (i.color?' - '+i.color:'') + ' x'+i.qty+' = '+(i.price*i.qty).toFixed(2)+' EUR').join('\n');
   const itemsShort = cart.map(i => i.name + ' x' + i.qty).join(', ');
 
   // Disable button
-  const btn = document.querySelector('#order-modal button[onclick*="confirmOrder"]');
+  const btn = document.querySelector('#order-modal .checkout-btn, #order-modal button[onclick*="confirmOrder"]');
   if(btn) { btn.disabled = true; btn.textContent = '⏳ Изпращане...'; }
 
   let savedToDb = false;
   const orderData = {
-    customer_name: name, email, phone, city: fullCity,
+    customer_name: name, email, phone, city,
     items: cart.map(i => ({
       id: i.id, name: i.name, size: i.size || null,
       color: i.color || null, price: i.price, qty: i.qty
@@ -1545,84 +1535,79 @@ async function confirmOrder() {
     note: note || null
   };
 
+  // Rate limiting — проверка на сесия (без сървърна функция)
+  const RL_KEY = 'rm_orders_' + new Date().toISOString().slice(0,10);
+  try {
+    const todayCount = parseInt(sessionStorage.getItem(RL_KEY) || '0');
+    if(todayCount >= 5) {
+      alert('Достигнат е максималният брой поръчки за днес. Свържете се с нас директно.');
+      if(btn) { btn.disabled = false; btn.textContent = 'Потвърди поръчката'; }
+      return;
+    }
+  } catch(e) { /* sessionStorage може да не е достъпен */ }
+
+  // 2. Запази поръчката И намали наличността чрез сигурна сървърна функция
+  // place_order() проверява наличността на сървъра — клиентът НЕ може да манипулира qty!
   if(sbShop) {
-    // 1. Сървърна rate limiting проверка
     try {
-      const { data: rlData, error: rlErr } = await sbShop.rpc('check_rate_limit', {
-        p_email: email.toLowerCase(),
-        p_action: 'order',
-        p_max_count: 3,
-        p_window_hours: 24
+      const { data, error } = await sbShop.rpc('place_order', {
+        order_data: orderData
       });
-      if(!rlErr && rlData === false) {
-        alert('Достигнат е максималният брой поръчки (3 за 24 часа). Свържете се с нас директно.');
-        if(btn) { btn.disabled = false; btn.textContent = '✅ Потвърди поръчката'; }
+      if(error) {
+        console.error('Supabase грешка:', error.message);
+        alert('Грешка при поръчката: ' + error.message);
+        if(btn) { btn.disabled = false; btn.textContent = 'Потвърди поръчката'; }
         return;
       }
-    } catch(e) { console.warn('Rate limit check skipped:', e.message); }
-
-    // 2. Запази поръчката чрез place_order() или директен INSERT като fallback
-    try {
-      const { data, error } = await sbShop.rpc('place_order', { order_data: orderData });
-      if(error) {
-        console.warn('place_order RPC грешка, опитвам директен INSERT:', error.message);
-        // Fallback: директен INSERT в таблицата
-        const { error: insErr } = await sbShop.from('orders').insert([{
-          customer_name: name,
-          email,
-          phone,
-          city: fullCity,
-          items: itemsShort,
-          total: parseFloat(total.toFixed(2)),
-          status: 'pending',
-          note: note || null
-        }]);
-        if(insErr) {
-          console.error('Директен INSERT грешка:', insErr.message);
-          // Продължаваме — поръчката ще се изпрати само по имейл
-        } else {
-          savedToDb = true;
-          console.log('Поръчка записана чрез директен INSERT');
-        }
-      } else {
-        if(data && data.success === false) {
-          alert('Грешка: ' + (data.error || 'Неуспешна поръчка'));
-          if(btn) { btn.disabled = false; btn.textContent = '✅ Потвърди поръчката'; }
-          return;
-        }
-        savedToDb = true;
-        console.log('Поръчка записана успешно чрез place_order, ID:', data && data.order_id);
-        // Обнови локалните наличности
-        cart.forEach(item => {
-          const prod = PRODUCTS.find(p => String(p.id) === String(item.id));
-          if(prod) prod.qty = Math.max(0, (prod.qty || 0) - item.qty);
-        });
+      if(data && data.success === false) {
+        alert('Грешка: ' + (data.error || 'Неуспешна поръчка'));
+        if(btn) { btn.disabled = false; btn.textContent = 'Потвърди поръчката'; }
+        return;
       }
+      savedToDb = true;
+      // Обнови брояча за rate limiting
+      try { sessionStorage.setItem(RL_KEY, String(parseInt(sessionStorage.getItem(RL_KEY)||'0') + 1)); } catch(e){}
+      console.log('Поръчка записана успешно, ID:', data && data.order_id);
+      // Обнови локалните наличности
+      cart.forEach(item => {
+        const prod = PRODUCTS.find(p => String(p.id) === String(item.id));
+        if(prod) prod.qty = Math.max(0, (prod.qty || 0) - item.qty);
+      });
     } catch(e) { console.error('Supabase exception:', e.message); }
   }
 
-  // 3. Изпрати имейл с EmailJS
+  // 2. Изпрати имейл с EmailJS
   if(typeof emailjs !== 'undefined' && window.EMAILJS_PUBLIC_KEY && window.EMAILJS_SERVICE_ID && window.EMAILJS_TEMPLATE_ID) {
     try {
+      // Инициализирай EmailJS
       emailjs.init(window.EMAILJS_PUBLIC_KEY);
+
+      // Подготви данните като чисти стрингове
       const emailData = {
-        customer_name:  String(name),
+        customer_name: String(name),
         customer_email: String(email),
         customer_phone: String(phone),
-        customer_city:  String(fullCity),
-        order_items:    String(itemsList),
-        order_total:    String(total.toFixed(2)) + ' EUR',
-        order_note:     String(note || 'Няма'),
+        customer_city: String(city),
+        order_items: String(itemsList),
+        order_total: String(total.toFixed(2)) + ' EUR',
+        order_note: String(note || 'Няма'),
       };
+
       console.log('Изпращане на имейл...', emailData);
-      const result = await emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, emailData);
+      const result = await emailjs.send(
+        window.EMAILJS_SERVICE_ID,
+        window.EMAILJS_TEMPLATE_ID,
+        emailData
+      );
       console.log('Имейл изпратен успешно:', result.status, result.text);
-    } catch(e) { console.error('EmailJS грешка:', e); }
+    } catch(e) {
+      console.error('EmailJS грешка:', e);
+    }
   } else {
     console.warn('EmailJS не е конфигуриран — провери supabase-config.js');
   }
 
-  // 4. Покажи успех
+  // 3. Покажи успех
   document.getElementById('order-modal').style.display = 'none';
   document.getElementById('success-modal').style.display = 'flex';
   cart = [];
@@ -1635,15 +1620,16 @@ async function sendSpecialOrder() {
   const hpot = document.getElementById('cf-honeypot');
   if(hpot && hpot.value) { console.warn('Bot detected'); return; }
 
-  const name = sanitizeInput('cf-name');
-  const email = sanitizeInput('cf-email');
-  const phone = sanitizeInput('cf-phone');
-  const cat = sanitizeInput('cf-cat');
-  const msg = sanitizeInput('cf-msg');
+  const name      = sanitizeInput('cf-name');
+  const email     = sanitizeInput('cf-email');
+  const phone     = sanitizeInput('cf-phone');
+  const viber     = sanitizeInput('cf-viber');
+  const messenger = sanitizeInput('cf-messenger');
+  const cat       = sanitizeInput('cf-cat');
+  const msg       = sanitizeInput('cf-msg');
 
-  if(!name || !email) { alert('Моля въведете поне вашето ime и имейл.'); return; }
+  if(!name || !email) { alert('Моля въведете поне вашето име и имейл.'); return; }
 
-  // Email validation
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if(!emailRe.test(email)) { alert('Моля въведете валиден имейл адрес.'); return; }
 
@@ -1654,31 +1640,66 @@ async function sendSpecialOrder() {
     return;
   }
 
-  // Save to Supabase
+  // Бутон - деактивирай по време на изпращане
+  const btn = document.querySelector('.contact-form button');
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ Изпращане...'; }
+
+  // Запис в Supabase
   if(sbShop) {
     try {
       const { error } = await sbShop.from('special_orders').insert([{
-        name, email, phone: phone || null,
-        category: cat || null,
+        name, email,
+        phone:       phone || null,
+        viber:       viber || null,
+        messenger:   messenger || null,
+        category:    cat || null,
         description: msg || null,
-        status: 'new'
+        status:      'new'
       }]);
       if(error) console.error('Грешка при запис:', error.message);
       else console.log('Специална поръчка записана успешно');
     } catch(e) { console.error(e.message); }
   }
 
+  // Имейл известие до теб (същия шаблон, различни данни)
+  if(typeof emailjs !== 'undefined' && window.EMAILJS_PUBLIC_KEY && window.EMAILJS_SERVICE_ID && window.EMAILJS_TEMPLATE_ID) {
+    try {
+      emailjs.init(window.EMAILJS_PUBLIC_KEY);
+      const contacts = [
+        phone     ? '📞 ' + phone     : '',
+        viber     ? '📱 Viber/WA: ' + viber : '',
+        messenger ? '💬 Messenger: ' + messenger : '',
+      ].filter(Boolean).join('\n') || '(само имейл)';
+
+      await emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
+        customer_name:  String(name),
+        customer_email: String(email),
+        customer_phone: contacts,
+        customer_city:  'Специална поръчка',
+        order_items:    'Категория: ' + (cat || '—') + '\n' + (msg || ''),
+        order_total:    'По договаряне',
+        order_note:     'СПЕЦИАЛНА ПОРЪЧКА — свържи се с клиента лично.',
+      });
+      console.log('Имейл известие изпратено');
+    } catch(e) { console.error('EmailJS грешка:', e); }
+  }
+
   // Rate limit counter
-  const spKeyFinal = 'rm_special_' + email.toLowerCase();
-  sessionStorage.setItem(spKeyFinal, String(parseInt(sessionStorage.getItem(spKeyFinal) || '0') + 1));
+  sessionStorage.setItem(spKey, String(parseInt(sessionStorage.getItem(spKey) || '0') + 1));
+
+  // Изчисти формата
+  ['cf-name','cf-email','cf-phone','cf-viber','cf-messenger','cf-cat','cf-msg'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+
+  if(btn) { btn.disabled = false; btn.textContent = 'Изпрати запитване 🌸'; }
 
   document.getElementById('cf-confirm').style.display = 'block';
-  document.getElementById('cf-name').value = '';
-  document.getElementById('cf-email').value = '';
-  if(document.getElementById('cf-phone')) document.getElementById('cf-phone').value = '';
-  if(document.getElementById('cf-cat')) document.getElementById('cf-cat').value = '';
-  if(document.getElementById('cf-msg')) document.getElementById('cf-msg').value = '';
-  setTimeout(() => { const el = document.getElementById('cf-confirm'); if(el) el.style.display = 'none'; }, 5000);
+  setTimeout(() => {
+    const el = document.getElementById('cf-confirm');
+    if(el) el.style.display = 'none';
+  }, 6000);
 }
 
 // ── HTTPS REDIRECT ───────────────────────────────────
