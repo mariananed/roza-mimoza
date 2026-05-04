@@ -878,7 +878,7 @@
     </div>
     <div class="form-group"><label>Бележка</label><input id="om-note" placeholder="Незадължително"></div>
     <div class="modal-actions">
-      <button class="btn btn-primary" onclick="saveOrder()">Запази поръчка</button>
+      <button id="om-save-btn" class="btn btn-primary" onclick="saveOrUpdateOrder()">✅ Добави поръчка</button>
       <button class="btn btn-outline" onclick="closeModal('order-modal')">Отказ</button>
     </div>
   </div>
@@ -1274,97 +1274,97 @@ async function deleteOrder(id) {
   renderOrders(); renderDashboard();
 }
 
-// ── Редактиране на поръчка ──────────────────────────────
-function editOrderModal(id) {
-  const o = orders.find(x => x.id === id);
-  if(!o) return;
-  document.getElementById('om-name').value  = o.name  || '';
-  document.getElementById('om-phone').value = o.phone || '';
-  document.getElementById('om-email').value = o.email || '';
-  document.getElementById('om-city').value  = o.city  || '';
-  document.getElementById('om-items').value = o.items || '';
-  document.getElementById('om-total').value = o.total || '';
-  document.getElementById('om-note').value  = o.note  || '';
-  document.getElementById('om-status').value = o.status || 'pending';
-
-  // Маркираме модала като редактиране
-  const modal = document.getElementById('order-modal');
-  modal.dataset.editId = id;
-  const title = modal.querySelector('h2, h3');
-  if(title) title.textContent = `✏️ Редактиране на поръчка #${id}`;
-  const saveBtn = modal.querySelector('button[onclick="saveOrder()"]');
-  if(saveBtn) { saveBtn.textContent = '💾 Запази промените'; saveBtn.onclick = () => updateOrder(id); }
-  modal.classList.add('open');
-}
-
-async function updateOrder(id) {
-  const name  = sanitizeInput('om-name');
-  const phone = sanitizeInput('om-phone');
-  const city  = sanitizeInput('om-city');
-  if(!name || !phone || !city) { alert('Попълнете задължителните полета.'); return; }
-  const data = {
-    customer_name: name, phone, email: document.getElementById('om-email').value,
-    city, items: document.getElementById('om-items').value,
-    total: parseFloat(document.getElementById('om-total').value) || 0,
-    status: document.getElementById('om-status').value,
-    note: document.getElementById('om-note').value,
-  };
-  if(isConfigured()) {
-    const { error } = await sb.from('orders').update(data).eq('id', id);
-    if(error) { showError('Грешка при запис: ' + error.message); return; }
-  }
-  const o = orders.find(x => x.id === id);
-  if(o) { Object.assign(o, { name, phone, email: data.email, city, items: data.items, total: data.total, status: data.status, note: data.note }); }
-  closeModal('order-modal');
-  // Нулирай модала за следващо ползване
-  const modal = document.getElementById('order-modal');
-  delete modal.dataset.editId;
-  const title = modal.querySelector('h2, h3');
-  if(title) title.textContent = 'Ръчна поръчка';
-  const saveBtn = modal.querySelector('button');
-  if(saveBtn) { saveBtn.textContent = '✅ Добави поръчка'; saveBtn.onclick = saveOrder; }
-  renderOrders(); renderDashboard();
-}
+// ── Редактиране/създаване на поръчка ───────────────────
+let editingOrderId = null;
 
 function openOrderModal() {
-  ['om-name','om-phone','om-email','om-city','om-items','om-note'].forEach(id => document.getElementById(id).value = '');
+  editingOrderId = null;
+  ['om-name','om-phone','om-email','om-city','om-items','om-note'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
   document.getElementById('om-total').value = '';
   document.getElementById('om-status').value = 'pending';
   const modal = document.getElementById('order-modal');
-  delete modal.dataset.editId;
-  const title = modal.querySelector('h2, h3');
-  if(title) title.textContent = 'Ръчна поръчка';
-  const saveBtn = modal.querySelector('button[onclick*="saveOrder"], button[onclick*="updateOrder"]');
-  if(saveBtn) { saveBtn.textContent = '✅ Добави поръчка'; saveBtn.setAttribute('onclick','saveOrder()'); }
+  modal.querySelector('h3').textContent = 'Ръчна поръчка';
+  document.getElementById('om-save-btn').textContent = '✅ Добави поръчка';
   modal.classList.add('open');
+  setTimeout(() => document.getElementById('om-name').focus(), 100);
 }
 
-async function saveOrder() {
-  const name = sanitizeInput('om-name');
-  const phone = sanitizeInput('om-phone');
-  const city = sanitizeInput('om-city');
-  if(!name || !phone || !city) { alert('Попълнете задължителните полета.'); return; }
-  const data = {
-    customer_name: name, phone, email: document.getElementById('om-email').value,
-    city, items: document.getElementById('om-items').value,
-    total: parseFloat(document.getElementById('om-total').value) || 0,
-    status: document.getElementById('om-status').value,
-    note: document.getElementById('om-note').value,
+function editOrderModal(id) {
+  id = Number(id);
+  const o = orders.find(x => Number(x.id) === id);
+  if(!o) { console.warn('Поръчка не е намерена:', id); return; }
+  editingOrderId = id;
+  document.getElementById('om-name').value   = o.name   || '';
+  document.getElementById('om-phone').value  = o.phone  || '';
+  document.getElementById('om-email').value  = o.email  || '';
+  document.getElementById('om-city').value   = o.city   || '';
+  document.getElementById('om-items').value  = o.items  || '';
+  document.getElementById('om-total').value  = o.total  || '';
+  document.getElementById('om-note').value   = o.note   || '';
+  document.getElementById('om-status').value = o.status || 'pending';
+  const modal = document.getElementById('order-modal');
+  modal.querySelector('h3').textContent = `✏️ Редактиране на поръчка #${id}`;
+  document.getElementById('om-save-btn').textContent = '💾 Запази промените';
+  modal.classList.add('open');
+  setTimeout(() => document.getElementById('om-name').focus(), 100);
+}
+
+// Единствена функция за запис — разпознава дали е нова или редакция
+async function saveOrUpdateOrder() {
+  const name  = (document.getElementById('om-name').value  || '').trim();
+  const phone = (document.getElementById('om-phone').value || '').trim();
+  const city  = (document.getElementById('om-city').value  || '').trim();
+  if(!name || !phone || !city) { alert('Попълнете задължителните полета: Клиент, Телефон, Град.'); return; }
+  const payload = {
+    customer_name: name,
+    phone,
+    email:  document.getElementById('om-email').value  || '',
+    city,
+    items:  document.getElementById('om-items').value  || '',
+    total:  parseFloat(document.getElementById('om-total').value)  || 0,
+    status: document.getElementById('om-status').value || 'pending',
+    note:   document.getElementById('om-note').value   || '',
   };
-  if(isConfigured()) {
-    const { data: inserted, error } = await sb.from('orders').insert([data]).select().single();
-    if(error) { showError('Грешка при запис: ' + error.message); return; }
-    orders.unshift({ id: inserted.id, name: inserted.customer_name, phone: inserted.phone,
-      email: inserted.email || '', city: inserted.city, items: inserted.items,
-      total: parseFloat(inserted.total), status: inserted.status,
-      date: (inserted.created_at || '').split('T')[0], note: inserted.note || '' });
+
+  if(editingOrderId !== null) {
+    // ── Редактиране ──
+    if(isConfigured()) {
+      const { error } = await sb.from('orders').update(payload).eq('id', editingOrderId);
+      if(error) { alert('Грешка при запис: ' + error.message); return; }
+    }
+    const o = orders.find(x => Number(x.id) === editingOrderId);
+    if(o) {
+      o.name   = name;   o.phone  = phone; o.email  = payload.email;
+      o.city   = city;   o.items  = payload.items;
+      o.total  = payload.total; o.status = payload.status; o.note = payload.note;
+    }
   } else {
-    orders.unshift({ id: nextOrdId++, name, phone, email: data.email, city, items: data.items,
-      total: data.total, status: data.status, date: new Date().toISOString().split('T')[0], note: data.note });
+    // ── Нова поръчка ──
+    if(isConfigured()) {
+      const { data: inserted, error } = await sb.from('orders').insert([payload]).select().single();
+      if(error) { alert('Грешка при запис: ' + error.message); return; }
+      orders.unshift({
+        id: inserted.id, name: inserted.customer_name, phone: inserted.phone,
+        email: inserted.email || '', city: inserted.city, items: inserted.items || '',
+        total: parseFloat(inserted.total), status: inserted.status,
+        date: (inserted.created_at || '').split('T')[0], note: inserted.note || ''
+      });
+    } else {
+      orders.unshift({
+        id: nextOrdId++, name, phone, email: payload.email, city,
+        items: payload.items, total: payload.total, status: payload.status,
+        date: new Date().toISOString().split('T')[0], note: payload.note
+      });
+    }
   }
   closeModal('order-modal');
+  editingOrderId = null;
   renderOrders(); renderDashboard();
 }
+
+function saveOrder() { saveOrUpdateOrder(); }
 
 // ── PRODUCTS ──────────────────────────────────────────
 function renderProducts() {
@@ -1860,13 +1860,14 @@ function createOrderFromSpecial(id) {
   const s = specialOrders.find(x => String(x.id) === String(id));
   if(!s) return;
 
-  document.getElementById('om-name').value  = s.name  || '';
-  document.getElementById('om-phone').value = s.phone || s.viber || '';
-  document.getElementById('om-email').value = s.email || '';
-  document.getElementById('om-city').value  = '';
-  document.getElementById('om-items').value = (s.cat ? s.cat + ': ' : '') + (s.desc || '');
-  document.getElementById('om-total').value = '';   // въвежда се ръчно
-  document.getElementById('om-note').value  = [
+  editingOrderId = null;  // нова поръчка
+  document.getElementById('om-name').value   = s.name  || '';
+  document.getElementById('om-phone').value  = s.phone || s.viber || '';
+  document.getElementById('om-email').value  = s.email || '';
+  document.getElementById('om-city').value   = '';
+  document.getElementById('om-items').value  = (s.cat ? s.cat + ': ' : '') + (s.desc || '');
+  document.getElementById('om-total').value  = '';   // въвежда се ръчно
+  document.getElementById('om-note').value   = [
     s.phone     ? '📞 ' + s.phone     : '',
     s.viber     ? '📱 ' + s.viber     : '',
     s.messenger ? '💬 ' + s.messenger : '',
@@ -1874,15 +1875,14 @@ function createOrderFromSpecial(id) {
   document.getElementById('om-status').value = 'pending';
 
   const modal = document.getElementById('order-modal');
-  delete modal.dataset.editId;
-  const title = modal.querySelector('h2, h3');
-  if(title) title.textContent = '➕ Поръчка от специално запитване';
-  // Задължително намираме бутона Запази и го свързваме с saveOrder
-  const saveBtn = modal.querySelector('button.btn-primary');
-  if(saveBtn) { saveBtn.textContent = '✅ Създай поръчката'; saveBtn.setAttribute('onclick','saveOrder()'); }
+  modal.querySelector('h3').textContent = '➕ Поръчка от специално запитване';
+  document.getElementById('om-save-btn').textContent = '✅ Създай поръчката';
 
   showTab('orders', document.querySelector('.nav-item[onclick*="orders"]'));
-  setTimeout(() => { modal.classList.add('open'); }, 150);
+  setTimeout(() => {
+    modal.classList.add('open');
+    document.getElementById('om-total').focus();
+  }, 200);
 
   changeSpecialStatus(id, 'accepted');
 }
