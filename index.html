@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
-<meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+  <!-- X-Frame-Options се задава като HTTP хедър, не като meta таг -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Роза-Мимоза Магазин</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
@@ -1514,8 +1514,6 @@ async function confirmOrder() {
     return;
   }
 
-  // Rate limiting се прави на сървъра чрез check_rate_limit() функция
-
   const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
   const itemsList = cart.map(i => i.name + (i.size?' ('+i.size+')':'') + (i.color?' - '+i.color:'') + ' x'+i.qty+' = '+(i.price*i.qty).toFixed(2)+' EUR').join('\n');
   const itemsShort = cart.map(i => i.name + ' x' + i.qty).join(', ');
@@ -1535,21 +1533,21 @@ async function confirmOrder() {
     note: note || null
   };
 
-  // 1. Сървърна rate limiting проверка (не sessionStorage!)
+  // Rate limiting — сървърна проверка чрез Supabase функция
   if(sbShop) {
     try {
-      const { data: rlData } = await sbShop.rpc('check_rate_limit', {
+      const { data: rlData, error: rlError } = await sbShop.rpc('check_rate_limit', {
         p_email: email.toLowerCase(),
         p_action: 'order',
         p_max_count: 3,
         p_window_hours: 24
       });
-      if(rlData === false) {
+      if(!rlError && rlData === false) {
         alert('Достигнат е максималният брой поръчки (3 за 24 часа). Свържете се с нас директно.');
         if(btn) { btn.disabled = false; btn.textContent = 'Потвърди поръчката'; }
         return;
       }
-    } catch(e) { console.warn('Rate limit check failed:', e.message); }
+    } catch(e) { console.warn('Rate limit check skipped:', e.message); }
   }
 
   // 2. Запази поръчката И намали наличността чрез сигурна сървърна функция

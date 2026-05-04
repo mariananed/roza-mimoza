@@ -419,22 +419,49 @@
 
     <!-- ═══ ORDERS ═══ -->
     <div id="tab-orders" class="tab-panel">
-      <div class="search-row">
-        <input class="search-input" placeholder="🔍 Търсене по клиент..." oninput="filterOrders(this.value)">
+      <div class="search-row" style="flex-wrap:wrap;gap:8px;">
+        <input class="search-input" placeholder="🔍 Търсене по клиент, телефон..." oninput="filterOrders(this.value)" style="min-width:200px;">
         <select class="filter-select" onchange="filterOrderStatus(this.value)">
           <option value="">Всички статуси</option>
-          <option value="pending">Нова</option>
-          <option value="sent">Изпратена</option>
-          <option value="done">Завършена</option>
+          <option value="pending">🆕 Нова</option>
+          <option value="sent">📦 Изпратена</option>
+          <option value="done">✅ Завършена</option>
+          <option value="cancelled">❌ Отказана</option>
+        </select>
+        <select class="filter-select" onchange="sortOrders(this.value)" id="order-sort-select">
+          <option value="date_desc">📅 Дата (нови първо)</option>
+          <option value="date_asc">📅 Дата (стари първо)</option>
+          <option value="total_desc">💶 Сума (висока първо)</option>
+          <option value="total_asc">💶 Сума (ниска първо)</option>
+          <option value="name_asc">🔤 Клиент (А→Я)</option>
+          <option value="loyal_desc">⭐ Лоялни клиенти</option>
         </select>
         <button class="btn btn-primary btn-sm" onclick="openOrderModal()">+ Ръчна поръчка</button>
       </div>
+
+      <!-- Лоялни клиенти панел -->
+      <div id="loyal-panel" style="display:none;background:var(--rose-pale);border:1px solid var(--rose-light);border-radius:12px;padding:14px 18px;margin-bottom:16px;">
+        <h4 style="font-size:13px;font-weight:700;color:var(--rose);margin-bottom:10px;">⭐ Лоялни клиенти (3+ поръчки)</h4>
+        <div id="loyal-list" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      </div>
+
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>Клиент</th><th>Телефон</th><th>Град / Еконт</th><th>Продукти</th><th>Сума</th><th>Статус</th><th>Дата</th><th>Печат</th></tr></thead>
+          <thead><tr>
+            <th>#</th>
+            <th>Клиент</th>
+            <th>Телефон</th>
+            <th>Град / Еконт</th>
+            <th>Продукти</th>
+            <th>Сума</th>
+            <th style="min-width:130px;">Статус</th>
+            <th>Дата</th>
+            <th>Действия</th>
+          </tr></thead>
           <tbody id="orders-tbody"></tbody>
         </table>
       </div>
+      <div id="orders-summary" style="font-size:12px;color:var(--text-light);margin-top:10px;padding:0 4px;"></div>
     </div>
 
     <!-- ═══ PRODUCTS ═══ -->
@@ -812,7 +839,7 @@
     <div class="form-row">
       <div class="form-group"><label>Сума (€)</label><input id="om-total" type="number" step="0.01" min="0" placeholder="0.00"></div>
       <div class="form-group"><label>Статус</label>
-        <select id="om-status"><option value="pending">Нова</option><option value="sent">Изпратена</option><option value="done">Завършена</option></select>
+        <select id="om-status"><option value="pending">🆕 Нова</option><option value="sent">📦 Изпратена</option><option value="done">✅ Завършена</option><option value="cancelled">❌ Отказана</option></select>
       </div>
     </div>
     <div class="form-group"><label>Бележка</label><input id="om-note" placeholder="Незадължително"></div>
@@ -1054,28 +1081,136 @@ function renderDashboard() {
 }
 
 // ── ORDERS ────────────────────────────────────────────
+let orderSortMode = 'date_desc';
+
+function sortOrders(mode) {
+  orderSortMode = mode;
+  if(mode === 'loyal_desc') {
+    renderLoyalPanel(true);
+  } else {
+    renderLoyalPanel(false);
+  }
+  renderOrders();
+}
+
+function renderLoyalPanel(show) {
+  const panel = document.getElementById('loyal-panel');
+  const list = document.getElementById('loyal-list');
+  if(!panel) return;
+  if(!show) { panel.style.display = 'none'; return; }
+
+  // Групирай поръчките по клиент (по телефон като уникален ключ)
+  const byPhone = {};
+  orders.forEach(o => {
+    const key = o.phone.replace(/\s/g,'');
+    if(!byPhone[key]) byPhone[key] = { name: o.name, phone: o.phone, count: 0, total: 0 };
+    byPhone[key].count++;
+    byPhone[key].total += o.total;
+  });
+  const loyal = Object.values(byPhone)
+    .filter(c => c.count >= 2)
+    .sort((a,b) => b.count - a.count || b.total - a.total);
+
+  if(!loyal.length) {
+    panel.style.display = 'block';
+    list.innerHTML = '<span style="font-size:13px;color:var(--text-light);">Все още няма клиенти с повече от 1 поръчка.</span>';
+    return;
+  }
+  panel.style.display = 'block';
+  list.innerHTML = loyal.map(c => {
+    const stars = c.count >= 5 ? '🌟' : c.count >= 3 ? '⭐' : '💛';
+    return `<div style="background:var(--white);border:1px solid var(--rose-light);border-radius:10px;padding:8px 14px;font-size:12px;">
+      <div style="font-weight:700;color:var(--text-dark);">${stars} ${c.name}</div>
+      <div style="color:var(--text-light);">${c.phone} · ${c.count} поръчки · ${c.total.toFixed(2)} €</div>
+    </div>`;
+  }).join('');
+}
+
+function getOrdersSorted(list) {
+  const arr = [...list];
+  switch(orderSortMode) {
+    case 'date_asc':   return arr.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+    case 'total_desc': return arr.sort((a,b) => b.total - a.total);
+    case 'total_asc':  return arr.sort((a,b) => a.total - b.total);
+    case 'name_asc':   return arr.sort((a,b) => a.name.localeCompare(b.name, 'bg'));
+    case 'loyal_desc': {
+      // Сортирай по брой поръчки на клиента
+      const count = {};
+      orders.forEach(o => { const k = o.phone.replace(/\s/g,''); count[k] = (count[k]||0)+1; });
+      return arr.sort((a,b) => (count[b.phone.replace(/\s/g,'')] || 0) - (count[a.phone.replace(/\s/g,'')] || 0));
+    }
+    default: return arr.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  }
+}
+
 function renderOrders() {
   let filtered = orders.filter(o => {
-    const matchText = !orderFilter || o.name.toLowerCase().includes(orderFilter.toLowerCase());
+    const q = (orderFilter||'').toLowerCase();
+    const matchText = !q || o.name.toLowerCase().includes(q) || (o.phone||'').includes(q);
     const matchStatus = !orderStatusFilter || o.status === orderStatusFilter;
     return matchText && matchStatus;
   });
+
+  const sorted = getOrdersSorted(filtered);
+
+  // Брой поръчки по телефон (за лоялност badge)
+  const phoneCount = {};
+  orders.forEach(o => { const k = o.phone.replace(/\s/g,''); phoneCount[k] = (phoneCount[k]||0)+1; });
+
   const tbody = document.getElementById('orders-tbody');
-  tbody.innerHTML = filtered.map(o => `
-    <tr><td><strong>#${o.id}</strong></td><td>${o.name}</td><td>${o.phone}</td>
-    <td style="font-size:12px;">${o.city}</td>
-    <td style="font-size:12px;max-width:160px;">${o.items}</td>
-    <td><strong>${o.total.toFixed(2)} €</strong></td>
-    <td><select onchange="changeOrderStatus(${o.id},this.value)" style="border:1px solid var(--rose-light);border-radius:8px;padding:4px 8px;font-size:12px;font-family:'Lato',sans-serif;background:var(--white);">
-      <option value="pending" ${o.status==='pending'?'selected':''}>Нова</option>
-      <option value="sent" ${o.status==='sent'?'selected':''}>Изпратена</option>
-      <option value="done" ${o.status==='done'?'selected':''}>Завършена</option>
-    </select></td>
-    <td style="font-size:12px;">${o.date}</td>
-    <td style="white-space:nowrap;">
-      <button class="btn btn-outline btn-sm" onclick="printOrder(${o.id})" style="margin-right:4px;" title="Разпечатай">🖨️</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.id})" title="Изтрий">✕</button>
-    </td></tr>`).join('');
+  if(!tbody) return;
+
+  if(!sorted.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text-light);padding:28px;">Няма намерени поръчки</td></tr>`;
+  } else {
+    tbody.innerHTML = sorted.map(o => {
+      const statusBadge = {
+        pending:   '<span class="badge badge-new">🆕 Нова</span>',
+        sent:      '<span class="badge" style="background:#EEF6FF;color:#2563EB;border:1px solid #BFDBFE;">📦 Изпратена</span>',
+        done:      '<span class="badge badge-ok">✅ Завършена</span>',
+        cancelled: '<span class="badge" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;">❌ Отказана</span>',
+      }[o.status] || `<span class="badge">${o.status}</span>`;
+
+      const phoneKey = (o.phone||'').replace(/\s/g,'');
+      const pCount = phoneCount[phoneKey] || 1;
+      const loyalBadge = pCount >= 5 ? ' 🌟' : pCount >= 3 ? ' ⭐' : pCount >= 2 ? ' 💛' : '';
+
+      return `<tr id="order-row-${o.id}">
+        <td><strong>#${o.id}</strong></td>
+        <td>
+          <div style="font-weight:600;">${o.name}${loyalBadge}</div>
+          ${o.note ? `<div style="font-size:11px;color:var(--text-light);margin-top:2px;">📝 ${o.note}</div>` : ''}
+        </td>
+        <td>${o.phone}</td>
+        <td style="font-size:12px;">${o.city}</td>
+        <td style="font-size:12px;max-width:150px;">${o.items}</td>
+        <td><strong>${o.total.toFixed(2)} €</strong></td>
+        <td>
+          <select onchange="changeOrderStatus(${o.id},this.value)"
+            style="border:1px solid var(--rose-light);border-radius:8px;padding:5px 8px;font-size:12px;font-family:'Lato',sans-serif;background:var(--white);cursor:pointer;width:100%;">
+            <option value="pending"   ${o.status==='pending'  ?'selected':''}>🆕 Нова</option>
+            <option value="sent"      ${o.status==='sent'     ?'selected':''}>📦 Изпратена</option>
+            <option value="done"      ${o.status==='done'     ?'selected':''}>✅ Завършена</option>
+            <option value="cancelled" ${o.status==='cancelled'?'selected':''}>❌ Отказана</option>
+          </select>
+        </td>
+        <td style="font-size:12px;white-space:nowrap;">${o.date}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-outline btn-sm" onclick="editOrderModal(${o.id})" title="Редактирай" style="margin-right:4px;">✏️</button>
+          <button class="btn btn-outline btn-sm" onclick="printOrder(${o.id})" title="Разпечатай" style="margin-right:4px;">🖨️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.id})" title="Изтрий">🗑️</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Обобщение
+  const summary = document.getElementById('orders-summary');
+  if(summary) {
+    const total = sorted.reduce((s,o) => s + o.total, 0);
+    const pending = sorted.filter(o => o.status==='pending').length;
+    summary.textContent = `Показани: ${sorted.length} поръчки · Сума: ${total.toFixed(2)} € · Нови: ${pending}`;
+  }
 }
 
 function filterOrders(v) { orderFilter = v; renderOrders(); }
@@ -1084,17 +1219,17 @@ function filterOrderStatus(v) { orderStatusFilter = v; renderOrders(); }
 async function changeOrderStatus(id, status) {
   const o = orders.find(x => x.id === id);
   if(!o) return;
-  const prevStatus = o.status;
   o.status = status;
   if(isConfigured()) {
     const { error } = await sb.from('orders').update({ status }).eq('id', id);
-    if(error) { showError('Грешка при обновяване: ' + error.message); return; }
+    if(error) { showError('Грешка при обновяване: ' + error.message); o.status = o._prevStatus; renderOrders(); return; }
   }
-  renderOrders();
+  renderOrders(); renderDashboard();
 }
 
 async function deleteOrder(id) {
-  if(!confirm('Изтриване на поръчка #' + id + '?')) return;
+  const o = orders.find(x => x.id === id);
+  if(!confirm(`Изтриване на поръчка #${id} (${o?.name || ''})?\n\nТова действие е необратимо.`)) return;
   if(isConfigured()) {
     const { error } = await sb.from('orders').delete().eq('id', id);
     if(error) { showError('Грешка: ' + error.message); return; }
@@ -1103,11 +1238,69 @@ async function deleteOrder(id) {
   renderOrders(); renderDashboard();
 }
 
+// ── Редактиране на поръчка ──────────────────────────────
+function editOrderModal(id) {
+  const o = orders.find(x => x.id === id);
+  if(!o) return;
+  document.getElementById('om-name').value  = o.name  || '';
+  document.getElementById('om-phone').value = o.phone || '';
+  document.getElementById('om-email').value = o.email || '';
+  document.getElementById('om-city').value  = o.city  || '';
+  document.getElementById('om-items').value = o.items || '';
+  document.getElementById('om-total').value = o.total || '';
+  document.getElementById('om-note').value  = o.note  || '';
+  document.getElementById('om-status').value = o.status || 'pending';
+
+  // Маркираме модала като редактиране
+  const modal = document.getElementById('order-modal');
+  modal.dataset.editId = id;
+  const title = modal.querySelector('h2, h3');
+  if(title) title.textContent = `✏️ Редактиране на поръчка #${id}`;
+  const saveBtn = modal.querySelector('button[onclick="saveOrder()"]');
+  if(saveBtn) { saveBtn.textContent = '💾 Запази промените'; saveBtn.onclick = () => updateOrder(id); }
+  modal.classList.add('open');
+}
+
+async function updateOrder(id) {
+  const name  = sanitizeInput('om-name');
+  const phone = sanitizeInput('om-phone');
+  const city  = sanitizeInput('om-city');
+  if(!name || !phone || !city) { alert('Попълнете задължителните полета.'); return; }
+  const data = {
+    customer_name: name, phone, email: document.getElementById('om-email').value,
+    city, items: document.getElementById('om-items').value,
+    total: parseFloat(document.getElementById('om-total').value) || 0,
+    status: document.getElementById('om-status').value,
+    note: document.getElementById('om-note').value,
+  };
+  if(isConfigured()) {
+    const { error } = await sb.from('orders').update(data).eq('id', id);
+    if(error) { showError('Грешка при запис: ' + error.message); return; }
+  }
+  const o = orders.find(x => x.id === id);
+  if(o) { Object.assign(o, { name, phone, email: data.email, city, items: data.items, total: data.total, status: data.status, note: data.note }); }
+  closeModal('order-modal');
+  // Нулирай модала за следващо ползване
+  const modal = document.getElementById('order-modal');
+  delete modal.dataset.editId;
+  const title = modal.querySelector('h2, h3');
+  if(title) title.textContent = 'Ръчна поръчка';
+  const saveBtn = modal.querySelector('button');
+  if(saveBtn) { saveBtn.textContent = '✅ Добави поръчка'; saveBtn.onclick = saveOrder; }
+  renderOrders(); renderDashboard();
+}
+
 function openOrderModal() {
   ['om-name','om-phone','om-email','om-city','om-items','om-note'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('om-total').value = '';
   document.getElementById('om-status').value = 'pending';
-  document.getElementById('order-modal').classList.add('open');
+  const modal = document.getElementById('order-modal');
+  delete modal.dataset.editId;
+  const title = modal.querySelector('h2, h3');
+  if(title) title.textContent = 'Ръчна поръчка';
+  const saveBtn = modal.querySelector('button[onclick*="saveOrder"], button[onclick*="updateOrder"]');
+  if(saveBtn) { saveBtn.textContent = '✅ Добави поръчка'; saveBtn.setAttribute('onclick','saveOrder()'); }
+  modal.classList.add('open');
 }
 
 async function saveOrder() {
