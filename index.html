@@ -1097,7 +1097,7 @@ let selectedSizes = {};
 let selectedColors = {};
 
 PRODUCTS.forEach(p => {
-  if(p.sizes || p.priceType === 'leaf') {
+  if((p.priceType === 'sizes' || p.priceType === 'leaf') && p.sizes && Object.keys(p.sizes).length > 0) {
     const sz = getSizes(p);
     selectedSizes[String(p.id)] = Object.keys(sz)[0];
   }
@@ -1160,7 +1160,7 @@ function productCard(p) {
 
   let sizeHtml = '';
   let priceHtml = '';
-  if(p.sizes || p.priceType === 'leaf') {
+  if((p.priceType === 'sizes' || p.priceType === 'leaf') && p.sizes && Object.keys(p.sizes).length > 0) {
     const sizes = getSizes(p);
     const defaultKey = Object.keys(sizes)[0];
     const sel = selectedSizes[p.id] || defaultKey;
@@ -1347,7 +1347,7 @@ function selectColor(id, color, btn) {
 function addToCart(id) {
   const strId = String(id);
   const p = PRODUCTS.find(x => String(x.id) === strId);
-  const hasSizes = p.sizes || p.priceType === 'leaf';
+  const hasSizes = (p.priceType === 'sizes' || p.priceType === 'leaf') && p.sizes && Object.keys(p.sizes).length > 0;
   const size = hasSizes ? selectedSizes[strId] : null;
   const sizes = hasSizes ? getSizes(p) : null;
   const defaultKey = sizes ? Object.keys(sizes)[0] : null;
@@ -1792,7 +1792,7 @@ async function loadProductsFromDB() {
           name: p.name,
           cat: p.cat,
           emoji: p.emoji || '🌸',
-          sizes: p.price_type === 'sizes',
+          sizes: p.price_type === 'sizes' && p.size_prices && Object.keys(p.size_prices).length > 0 ? p.size_prices : null,
           price: p.price,
           sizePrices: p.size_prices,
           colors: Array.isArray(p.colors) ? p.colors : (typeof p.colors === 'string' && p.colors ? p.colors.replace(/[{}\[\]'\"]/g,'').split(',').map(c=>c.trim()).filter(Boolean) : []),
@@ -1808,7 +1808,7 @@ async function loadProductsFromDB() {
         });
       });
       PRODUCTS.forEach(p => {
-        if(p.sizes || p.priceType === 'leaf') {
+        if((p.priceType === 'sizes' || p.priceType === 'leaf') && p.sizes && Object.keys(p.sizes).length > 0) {
           const sz = getSizes(p);
           selectedSizes[String(p.id)] = Object.keys(sz)[0];
         }

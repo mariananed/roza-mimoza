@@ -1409,7 +1409,7 @@ function openProductModal(editId) {
     document.getElementById('pm-name').value = p.name;
     document.getElementById('pm-cat').value = p.cat;
     document.getElementById('pm-emoji').value = p.emoji;
-    document.getElementById('pm-price-type').value = p.priceType || 'sizes';
+    document.getElementById('pm-price-type').value = p.priceType || 'fixed';
     document.getElementById('pm-price').value = p.price || '';
     // Load per-size prices
     const sp = p.sizePrices || {};
@@ -1444,7 +1444,7 @@ function openProductModal(editId) {
   } else {
     ['pm-name','pm-emoji','pm-price','pm-color','pm-desc','pm-material','pm-p5cm','pm-p4cm','pm-p3cm','pm-ppupka','pm-plisto','pm-pklonche'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
     document.getElementById('pm-cat').value = 'rozi';
-    document.getElementById('pm-price-type').value = 'sizes';
+    document.getElementById('pm-price-type').value = 'fixed';
     document.getElementById('pm-qty').value = 0;
     document.getElementById('pm-min').value = 5;
     document.getElementById('pm-status').value = 'active';
