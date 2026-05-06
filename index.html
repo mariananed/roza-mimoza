@@ -1787,14 +1787,17 @@ async function loadProductsFromDB() {
       // Map Supabase fields to local format
       PRODUCTS.length = 0;
       data.forEach(p => {
+        // Ако продуктът има price и е fixed (или стар sizes без валидни size_prices) — третирай като fixed
+        const effectiveType = (p.price_type === 'fixed' || !p.size_prices || Object.keys(p.size_prices||{}).length === 0) ? 'fixed' : p.price_type;
+        const hasSizePrices = effectiveType !== 'fixed' && p.size_prices && Object.keys(p.size_prices).length > 0;
         PRODUCTS.push({
           id: p.id,
           name: p.name,
           cat: p.cat,
           emoji: p.emoji || '🌸',
-          sizes: p.price_type === 'sizes' && p.size_prices && Object.keys(p.size_prices).length > 0 ? p.size_prices : null,
+          sizes: hasSizePrices ? p.size_prices : null,
           price: p.price,
-          sizePrices: p.size_prices,
+          sizePrices: hasSizePrices ? p.size_prices : null,
           colors: Array.isArray(p.colors) ? p.colors : (typeof p.colors === 'string' && p.colors ? p.colors.replace(/[{}\[\]'\"]/g,'').split(',').map(c=>c.trim()).filter(Boolean) : []),
           desc: p.description,
           material: p.material,
@@ -1804,7 +1807,7 @@ async function loadProductsFromDB() {
           status: p.status,
           special: p.is_special,
           badge: p.badge,
-          priceType: p.price_type,
+          priceType: effectiveType,
         });
       });
       PRODUCTS.forEach(p => {

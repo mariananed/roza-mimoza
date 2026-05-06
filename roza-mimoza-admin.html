@@ -1409,7 +1409,7 @@ function openProductModal(editId) {
     document.getElementById('pm-name').value = p.name;
     document.getElementById('pm-cat').value = p.cat;
     document.getElementById('pm-emoji').value = p.emoji;
-    document.getElementById('pm-price-type').value = p.priceType || 'fixed';
+    document.getElementById('pm-price-type').value = 'fixed';
     document.getElementById('pm-price').value = p.price || '';
     // Load per-size prices
     const sp = p.sizePrices || {};
@@ -1551,7 +1551,9 @@ async function saveProduct() {
   const name = sanitizeInput('pm-name');
   if(!name) { alert('Въведете име на продукта.'); return; }
 
-  const priceType = document.getElementById('pm-price-type').value;
+  const priceType = 'fixed';  // Само фиксирана цена
+  const price = parseFloat(document.getElementById('pm-price').value) || 0;
+  if(!price) { alert('Въведете цена на продукта.'); return; }
   let imageUrl = editingProdId ? (products.find(p=>String(p.id)===String(editingProdId))||{}).image : null;
 
   // Определи откъде идва снимката
@@ -1586,9 +1588,9 @@ async function saveProduct() {
     name,
     cat: document.getElementById('pm-cat').value,
     emoji: document.getElementById('pm-emoji').value || '🌸',
-    price_type: priceType,
-    price: priceType === 'fixed' ? parseFloat(document.getElementById('pm-price').value)||0 : null,
-    size_prices: sizePrices,
+    price_type: 'fixed',
+    price: price,
+    size_prices: null,
     colors,
     description: document.getElementById('pm-desc').value.trim(),
     material: document.getElementById('pm-material').value.trim(),
