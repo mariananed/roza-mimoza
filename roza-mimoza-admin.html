@@ -1174,8 +1174,41 @@ function getOrdersSorted(list) {
 }
 
 function renderItemsTable(o) {
-  const rows = o.itemsRaw && o.itemsRaw.length ? o.itemsRaw : null;
-  if(!rows) return `<span style="font-size:12px;color:var(--text-light);">${o.items || '—'}</span>`;
+  let rows = null;
+
+  // Случай 1: имаме JSON масив от Supabase (нови поръчки)
+  if(o.itemsRaw && o.itemsRaw.length) {
+    rows = o.itemsRaw;
+  }
+  // Случай 2: стар текстов низ — парсваме го в редове
+  else if(o.items && typeof o.items === 'string' && o.items.trim()) {
+    rows = o.items.split(',').map(part => {
+      part = part.trim();
+      // Формат: "Роза 4 см x5 - Крем" или "Роза x5"
+      const qtyMatch = part.match(/x(\d+)/i);
+      const qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+      // Извади цвят след " - "
+      const dashIdx = part.indexOf(' - ');
+      const color = dashIdx >= 0 ? part.slice(dashIdx + 3).trim() : '';
+      // Извади размер (напр. "4 см", "малки")
+      const sizeMatch = part.match(/(\d+\s*см|малки|пъпка|листо|клонче)/i);
+      const size = sizeMatch ? sizeMatch[1] : '';
+      // Изчисти името
+      let name = part
+        .replace(/x\d+/i, '')
+        .replace(/ - .*/, '')
+        .replace(/\d+\s*см/i, '')
+        .replace(/малки|пъпка|листо|клонче/i, '')
+        .replace(/\s+/g, ' ').trim()
+        .replace(/,\s*$/, '');
+      return { name: name || part, size, color, qty, price: null };
+    }).filter(r => r.name);
+  }
+
+  if(!rows || !rows.length) {
+    return `<span style="font-size:12px;color:var(--text-light);">${o.items || '—'}</span>`;
+  }
+
   const head = `<tr style="background:var(--rose);color:#fff;">
     <th style="padding:3px 6px;font-weight:600;text-align:left;">Модел</th>
     <th style="padding:3px 6px;font-weight:600;text-align:center;">Размер</th>
@@ -1183,21 +1216,25 @@ function renderItemsTable(o) {
     <th style="padding:3px 6px;font-weight:600;text-align:right;">Ед.</th>
     <th style="padding:3px 6px;font-weight:600;text-align:right;">Сума</th>
   </tr>`;
+
   const bodyRows = rows.map((i, idx) => {
-    const name  = i.name  || i;
-    const size  = i.size  || '—';
-    const qty   = i.qty   || 1;
-    const price = i.price ? parseFloat(i.price).toFixed(2) : '—';
-    const sum   = i.price ? (parseFloat(i.price) * qty).toFixed(2) : '—';
+    const name  = typeof i === 'object' ? (i.name  || '—') : String(i);
+    const size  = typeof i === 'object' ? (i.size  || '—') : '—';
+    const color = typeof i === 'object' ? (i.color || '')  : '';
+    const qty   = typeof i === 'object' ? (i.qty   || 1)  : 1;
+    const price = (typeof i === 'object' && i.price) ? parseFloat(i.price).toFixed(2) : '—';
+    const sum   = (typeof i === 'object' && i.price) ? (parseFloat(i.price) * qty).toFixed(2) : '—';
+    const nameCell = color ? `${name}<br><span style="font-size:10px;color:var(--text-light);">${color}</span>` : name;
     const bg = idx % 2 === 0 ? '#fff' : '#fdf6fb';
     return `<tr style="background:${bg};">
-      <td style="padding:3px 6px;white-space:nowrap;">${name}</td>
+      <td style="padding:3px 6px;">${nameCell}</td>
       <td style="padding:3px 6px;text-align:center;color:var(--text-light);">${size}</td>
       <td style="padding:3px 6px;text-align:center;font-weight:600;">${qty}</td>
-      <td style="padding:3px 6px;text-align:right;">${price} €</td>
-      <td style="padding:3px 6px;text-align:right;font-weight:600;">${sum} €</td>
+      <td style="padding:3px 6px;text-align:right;">${price !== '—' ? price + ' €' : '—'}</td>
+      <td style="padding:3px 6px;text-align:right;font-weight:600;">${sum !== '—' ? sum + ' €' : '—'}</td>
     </tr>`;
   }).join('');
+
   return `<table style="width:100%;border-collapse:collapse;font-size:11px;font-family:'Lato',sans-serif;border:1px solid var(--rose-light);border-radius:6px;overflow:hidden;">
     <thead>${head}</thead><tbody>${bodyRows}</tbody>
   </table>`;
