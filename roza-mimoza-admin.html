@@ -1272,30 +1272,30 @@ function renderOrders() {
       const pCount = phoneCount[phoneKey] || 1;
       const loyalBadge = pCount >= 5 ? ' 🌟' : pCount >= 3 ? ' ⭐' : pCount >= 2 ? ' 💛' : '';
 
-      return `<tr id="order-row-${o.id}">
-        <td><strong>#${o.id}</strong></td>
-        <td>
-          <div style="font-weight:600;">${o.name}${loyalBadge}</div>
-          ${o.note ? `<div style="font-size:11px;color:var(--text-light);margin-top:2px;">📝 ${o.note}</div>` : ''}
+      return `<tr id="order-row-${o.id}" style="font-size:12px;">
+        <td style="white-space:nowrap;padding:4px 6px;"><strong>#${o.id}</strong></td>
+        <td style="padding:4px 6px;min-width:90px;">
+          <div style="font-weight:600;font-size:12px;">${o.name}${loyalBadge}</div>
+          ${o.note ? `<div style="font-size:10px;color:var(--text-light);margin-top:1px;">📝 ${o.note}</div>` : ''}
         </td>
-        <td>${o.phone}</td>
-        <td style="font-size:12px;">${o.city}</td>
-        <td style="max-width:220px;min-width:160px;">${renderItemsTable(o)}</td>
-        <td><strong>${o.total.toFixed(2)} €</strong></td>
-        <td>
+        <td style="padding:4px 6px;white-space:nowrap;font-size:12px;">${o.phone}</td>
+        <td style="padding:4px 6px;font-size:11px;max-width:90px;">${o.city}</td>
+        <td style="max-width:180px;min-width:130px;padding:4px 6px;">${renderItemsTable(o)}</td>
+        <td style="padding:4px 6px;white-space:nowrap;"><strong>${o.total.toFixed(2)} €</strong></td>
+        <td style="padding:4px 6px;min-width:120px;">
           <select onchange="changeOrderStatus(${o.id},this.value)"
-            style="border:1px solid var(--rose-light);border-radius:8px;padding:5px 8px;font-size:12px;font-family:'Lato',sans-serif;background:var(--white);cursor:pointer;width:100%;">
+            style="border:1px solid var(--rose-light);border-radius:8px;padding:4px 6px;font-size:11px;font-family:'Lato',sans-serif;background:var(--white);cursor:pointer;width:100%;">
             <option value="pending"   ${o.status==='pending'  ?'selected':''}>🆕 Нова</option>
             <option value="sent"      ${o.status==='sent'     ?'selected':''}>📦 Изпратена</option>
             <option value="done"      ${o.status==='done'     ?'selected':''}>✅ Завършена</option>
             <option value="cancelled" ${o.status==='cancelled'?'selected':''}>❌ Отказана</option>
           </select>
         </td>
-        <td style="font-size:12px;white-space:nowrap;">${o.date}</td>
-        <td style="white-space:nowrap;">
-          <button class="btn btn-outline btn-sm" onclick="editOrderModal(${o.id})" title="Редактирай" style="margin-right:4px;">✏️</button>
-          <button class="btn btn-outline btn-sm" onclick="printOrder(${o.id})" title="Разпечатай" style="margin-right:4px;">🖨️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.id})" title="Изтрий">🗑️</button>
+        <td style="padding:4px 6px;font-size:11px;white-space:nowrap;">${o.date}</td>
+        <td style="padding:4px 6px;white-space:nowrap;">
+          <button class="btn btn-outline btn-sm" onclick="editOrderModal(${o.id})" title="Редактирай" style="padding:3px 7px;margin-right:2px;">✏️</button>
+          <button class="btn btn-outline btn-sm" onclick="printOrder(${o.id})" title="Разпечатай" style="padding:3px 7px;margin-right:2px;">🖨️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.id})" title="Изтрий" style="padding:3px 7px;">🗑️</button>
         </td>
       </tr>`;
     }).join('');
@@ -2200,7 +2200,68 @@ function printOrder(id) {
   const o = orders.find(x => String(x.id) === String(id));
   if(!o) return;
 
-  const statusLabel = {pending:'Нова', sent:'Изпратена', done:'Завършена'}[o.status] || o.status;
+  const statusLabel = {pending:'Нова', sent:'Изпратена', done:'Завършена', cancelled:'Отказана'}[o.status] || o.status;
+  const statusColor = {pending:'#B8860B', sent:'#185FA5', done:'#2E7D52', cancelled:'#DC2626'}[o.status] || '#888';
+  const statusBg = {pending:'#FFF8E1', sent:'#EEF6FF', done:'#E8F5EE', cancelled:'#FEF2F2'}[o.status] || '#f5f5f5';
+
+  // Изгради таблица с продуктите
+  let itemsTableHtml = '';
+  if(o.itemsRaw && o.itemsRaw.length) {
+    const rows = o.itemsRaw.map((i, idx) => {
+      const bg = idx % 2 === 0 ? '#fff' : '#fdf6fb';
+      const name  = i.name  || '—';
+      const size  = i.size  || '—';
+      const color = i.color || '';
+      const qty   = i.qty   || 1;
+      const price = i.price ? parseFloat(i.price).toFixed(2) + ' €' : '—';
+      const sum   = i.price ? (parseFloat(i.price) * qty).toFixed(2) + ' €' : '—';
+      return `<tr style="background:${bg};">
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;">${name}${color ? '<br><span style="font-size:10px;color:#999;">'+color+'</span>' : ''}</td>
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:center;">${size}</td>
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:center;font-weight:700;">${qty}</td>
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:right;">${price}</td>
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:right;font-weight:700;">${sum}</td>
+      </tr>`;
+    }).join('');
+    itemsTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:#3d1a32;color:#fff;">
+        <th style="padding:7px 10px;text-align:left;">Продукт</th>
+        <th style="padding:7px 10px;text-align:center;">Размер</th>
+        <th style="padding:7px 10px;text-align:center;">Бр.</th>
+        <th style="padding:7px 10px;text-align:right;">Ед. цена</th>
+        <th style="padding:7px 10px;text-align:right;">Сума</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  } else {
+    // Стари поръчки — парсни текста в таблица
+    const parts = (o.items || '').split(',').map(p => p.trim()).filter(Boolean);
+    const rows = parts.map((part, idx) => {
+      const bg = idx % 2 === 0 ? '#fff' : '#fdf6fb';
+      const qtyMatch = part.match(/x(\d+)/i);
+      const qty = qtyMatch ? qtyMatch[1] : '1';
+      const dashIdx = part.indexOf(' - ');
+      const color = dashIdx >= 0 ? part.slice(dashIdx + 3).trim() : '';
+      const name = part.replace(/x\d+/i,'').replace(/ - .*/,'').replace(/\s+/g,' ').trim();
+      return `<tr style="background:${bg};">
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;">${name}</td>
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:center;color:#999;">${color || '—'}</td>
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:center;font-weight:700;">${qty}</td>
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:right;">—</td>
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:right;">—</td>
+      </tr>`;
+    }).join('');
+    itemsTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:#3d1a32;color:#fff;">
+        <th style="padding:7px 10px;text-align:left;">Продукт</th>
+        <th style="padding:7px 10px;text-align:center;">Цвят</th>
+        <th style="padding:7px 10px;text-align:center;">Бр.</th>
+        <th style="padding:7px 10px;text-align:right;">Ед. цена</th>
+        <th style="padding:7px 10px;text-align:right;">Сума</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
 
   const html = `<!DOCTYPE html>
 <html lang="bg">
@@ -2209,7 +2270,7 @@ function printOrder(id) {
 <title>Поръчка #${o.id} — Роза-Мимоза</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; color: #3D2B2B; padding: 30px; max-width: 600px; margin: 0 auto; }
+  body { font-family: Arial, sans-serif; color: #3D2B2B; padding: 30px; max-width: 640px; margin: 0 auto; }
   .header { text-align: center; border-bottom: 2px solid #C8748A; padding-bottom: 16px; margin-bottom: 20px; }
   .header h1 { font-size: 22px; color: #C8748A; margin-bottom: 4px; }
   .header p { font-size: 12px; color: #7A5C5C; }
@@ -2219,15 +2280,11 @@ function printOrder(id) {
   .row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; border-bottom: 1px solid #F9EEF1; }
   .row:last-child { border-bottom: none; }
   .label { color: #7A5C5C; }
-  .value { font-weight: bold; text-align: right; max-width: 60%; }
-  .items-box { background: #F9EEF1; border-radius: 8px; padding: 12px; font-size: 13px; line-height: 1.8; white-space: pre-line; }
+  .value { font-weight: bold; text-align: right; max-width: 65%; }
   .total-row { display: flex; justify-content: space-between; margin-top: 14px; padding: 10px 14px; background: #C8748A; color: white; border-radius: 8px; font-size: 16px; font-weight: bold; }
   .footer { text-align: center; margin-top: 24px; padding-top: 14px; border-top: 1px dashed #E8B4C0; font-size: 11px; color: #B08080; line-height: 1.8; }
-  .status-badge { display: inline-block; padding: 3px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; background: ${o.status==='done'?'#E8F5EE':o.status==='sent'?'#E8F2FB':'#FFF8E1'}; color: ${o.status==='done'?'#2E7D52':o.status==='sent'?'#185FA5':'#B8860B'}; }
-  @media print {
-    body { padding: 10px; }
-    .no-print { display: none; }
-  }
+  .status-badge { display: inline-block; padding: 3px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; background: ${statusBg}; color: ${statusColor}; }
+  @media print { body { padding: 10px; } .no-print { display: none; } }
 </style>
 </head>
 <body>
@@ -2251,7 +2308,7 @@ function printOrder(id) {
 
 <div class="section">
   <div class="section-title">Поръчани продукти</div>
-  <div class="items-box">${o.items}</div>
+  ${itemsTableHtml}
 </div>
 
 <div class="total-row">
@@ -2270,11 +2327,10 @@ function printOrder(id) {
   <button onclick="window.close()" style="background:none;border:1px solid #E8B4C0;border-radius:20px;padding:10px 20px;font-size:14px;cursor:pointer;margin-left:10px;color:#7A5C5C;">Затвори</button>
 </div>
 
-<scr' + 'ipt>window.onload = function() { window.print(); }</scr' + 'ipt>
 </body>
 </html>`;
 
-  const win = window.open('', '_blank', 'width=680,height=800');
+  const win = window.open('', '_blank', 'width=700,height=850');
   win.document.write(html);
   win.document.close();
 }
