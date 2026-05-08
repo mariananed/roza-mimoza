@@ -513,43 +513,27 @@
     line-height: 1;
   }
 
-  .cart-items { flex: 1; overflow-y: auto; padding: 16px 24px; }
-  .cart-item {
-    display: flex; gap: 14px; align-items: flex-start;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--rose-pale);
-  }
-  .cart-item-icon {
-    width: 54px; height: 54px; border-radius: 10px;
-    background: linear-gradient(135deg, var(--rose-pale), var(--peach-light));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 26px; flex-shrink: 0;
-  }
-  .cart-item-info { flex: 1; }
-  .cart-item-info h5 {
-    font-size: 14px; font-weight: 700; color: var(--text-dark);
-    margin-bottom: 2px;
-  }
-  .cart-item-info p { font-size: 12px; color: var(--text-light); }
-  .cart-item-price { font-size: 15px; font-weight: 700; color: var(--rose); }
-  .cart-item-remove {
-    background: none; border: none; cursor: pointer;
-    font-size: 16px; color: var(--rose-light);
-    transition: color 0.15s;
-  }
-  .cart-item-remove:hover { color: var(--rose); }
-  .cart-qty { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-  .qty-btn {
-    width: 22px; height: 22px; border-radius: 50%;
-    border: 1px solid var(--rose-light);
-    background: var(--rose-pale);
-    cursor: pointer; font-size: 14px; line-height: 1;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--rose);
-    transition: background 0.15s;
-  }
-  .qty-btn:hover { background: var(--rose-light); }
-  .qty-num { font-size: 13px; font-weight: 700; color: var(--text-dark); min-width: 18px; text-align: center; }
+  .cart-items { flex: 1; overflow-y: auto; padding: 0; }
+  .cart-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .cart-table th { padding:7px 8px; background:var(--rose-pale); color:var(--text-mid); font-weight:600; font-size:11px; border-bottom:1px solid var(--rose-light); text-align:left; white-space:nowrap; }
+  .cart-table td { padding:6px 8px; border-bottom:1px solid #f5eaf3; vertical-align:middle; }
+  .cart-table tr:last-child td { border-bottom:none; }
+  .cart-thumb { width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid var(--rose-light); display:block; }
+  .cart-thumb-emoji { width:40px; height:40px; display:flex; align-items:center; justify-content:center; font-size:20px; background:var(--rose-pale); border-radius:6px; flex-shrink:0; }
+  .cart-item-name { font-weight:600; font-size:12px; color:var(--text-dark); line-height:1.3; }
+  .cart-item-sub { font-size:11px; color:var(--text-light); margin-top:1px; }
+  .cart-item-price { font-weight:600; color:var(--text-mid); white-space:nowrap; font-size:12px; }
+  .cart-item-total { font-weight:700; color:var(--rose); white-space:nowrap; font-size:13px; }
+  .qty-btn { width:22px; height:22px; border:1px solid var(--rose-light); background:var(--rose-pale); border-radius:50%; cursor:pointer; font-size:13px; line-height:1; display:inline-flex; align-items:center; justify-content:center; padding:0; color:var(--rose); flex-shrink:0; }
+  .qty-btn:hover { background:var(--rose-light); }
+  .qty-num-input { width:34px; height:22px; border:1px solid var(--rose-light); border-radius:6px; text-align:center; font-size:12px; font-family:'Lato',sans-serif; color:var(--text-dark); padding:0; background:var(--white); }
+  .qty-controls { display:flex; align-items:center; gap:3px; }
+  .cart-remove { background:none; border:none; color:#ccc; cursor:pointer; font-size:15px; padding:0 2px; line-height:1; }
+  .cart-remove:hover { color:var(--rose); }
+  /* legacy - keep for compat */
+  .cart-item { display:none; }
+  .cart-qty { display:flex; align-items:center; gap:6px; margin-top:4px; }
+  .qty-num { font-size:13px; font-weight:700; color:var(--text-dark); min-width:18px; text-align:center; }
 
   .cart-footer {
     padding: 18px 24px 24px;
@@ -1222,7 +1206,12 @@ function productCard(p) {
   // Деактивирай бутона ако е изчерпан
   const addBtn = qty === 0
     ? `<button class="add-btn" disabled style="opacity:0.4;cursor:not-allowed;">Изчерпан</button>`
-    : `<button class="add-btn" onclick="addToCart('${p.id}')">+ Добави</button>`;
+    : `<div style="display:flex;align-items:center;gap:6px;">
+        <input type="number" id="qty-field-${p.id}" min="1" max="${qty||999}" value="1"
+          style="width:52px;height:38px;border:1px solid var(--rose-light);border-radius:10px;text-align:center;font-size:14px;font-family:'Lato',sans-serif;color:var(--text-dark);background:var(--rose-pale);padding:0;"
+          oninput="clampQtyField(this,${qty||999})">
+        <button class="add-btn" onclick="addToCartQty('${p.id}')">+ Добави</button>
+      </div>`;
 
   return `
   <div class="product-card" data-cat="${p.cat}">
@@ -1344,6 +1333,88 @@ function selectColor(id, color, btn) {
   renderProducts();
 }
 
+function clampQtyField(input, max) {
+  let v = parseInt(input.value) || 1;
+  if(v < 1) v = 1;
+  if(v > max) v = max;
+  input.value = v;
+}
+
+function addToCartQty(id) {
+  const strId = String(id);
+  const field = document.getElementById('qty-field-' + strId);
+  const requestedQty = field ? (parseInt(field.value) || 1) : 1;
+  const p = PRODUCTS.find(x => String(x.id) === strId);
+  if(!p) return;
+  const hasSizes = (p.priceType === 'sizes' || p.priceType === 'leaf') && p.sizes && Object.keys(p.sizes).length > 0;
+  const size = hasSizes ? selectedSizes[strId] : null;
+  const sizes = hasSizes ? getSizes(p) : null;
+  const defaultKey = sizes ? Object.keys(sizes)[0] : null;
+  const sizeKey = size || defaultKey;
+  const price = hasSizes ? (sizes[sizeKey] || sizes[defaultKey]).price : (p.price || 0);
+  const sizeLabel = hasSizes && sizes ? (sizes[sizeKey] || sizes[defaultKey]).label : '';
+  let color = '';
+  if(p.special) {
+    const inp = document.getElementById('color-input-' + id);
+    color = inp ? inp.value.trim() : '';
+  } else {
+    color = selectedColors[strId] || (p.colors && p.colors[0]) || '';
+  }
+  const key = `${id}-${size||'fixed'}-${color}`;
+  const maxQty = p.qty || 999;
+  const existing = cart.find(x => x.key === key);
+  if(existing) {
+    const newQty = Math.min(existing.qty + requestedQty, maxQty);
+    if(newQty > existing.qty) existing.qty = newQty;
+    else { alert('Не може да поръчате повече от наличните ' + maxQty + ' бр.'); return; }
+  } else {
+    if(maxQty === 0) { alert('Продуктът е изчерпан.'); return; }
+    const finalQty = Math.min(requestedQty, maxQty);
+    cart.push({ key, id, name:p.name, emoji:p.emoji, image:p.image||null, size:sizeLabel, color, price, qty:finalQty });
+  }
+  if(field) field.value = 1; // Нулирай полето след добавяне
+  updateCart();
+  const btn = document.getElementById('cart-count');
+  btn.style.transform = 'scale(1.4)';
+  setTimeout(() => btn.style.transform = '', 200);
+}
+
+function setQty(key, val, maxQty) {
+  const item = cart.find(x => x.key === key);
+  if(!item) return;
+  let n = parseInt(val) || 1;
+  n = Math.max(1, Math.min(n, maxQty));
+  item.qty = n;
+  // Обнови само числото без пълен re-render за да не губим фокус
+  const input = document.querySelector(`.qty-num-input[onchange*="${key}"]`);
+  if(input && parseInt(input.value) !== n) input.value = n;
+  // Обнови сумата за реда
+  const cells = input ? input.closest('tr').querySelectorAll('td') : null;
+  if(cells && cells[4]) cells[4].textContent = (item.price * n).toFixed(2) + ' €';
+  // Обнови total и cart count
+  const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
+  document.getElementById('cart-count').textContent = cart.reduce((s,i) => s+i.qty, 0);
+  document.getElementById('cart-total').textContent = total.toFixed(2) + ' €';
+  // Обнови min order bar
+  const minBar = document.getElementById('min-order-bar');
+  const minLeft = document.getElementById('min-order-left');
+  const minProgress = document.getElementById('min-order-progress');
+  const checkoutBtn = document.getElementById('checkout-btn');
+  if(minBar && cart.length) {
+    const pct = Math.min(100, Math.round(total / MIN_ORDER_AMOUNT * 100));
+    if(minProgress) minProgress.style.width = pct + '%';
+    if(total >= MIN_ORDER_AMOUNT) {
+      if(minLeft) minLeft.textContent = '✅ Достигнат';
+      if(minProgress) minProgress.style.background = '#3a8f5a';
+      if(checkoutBtn) { checkoutBtn.disabled = false; checkoutBtn.style.opacity = '1'; checkoutBtn.textContent = 'Към поръчката →'; }
+    } else {
+      if(minLeft) minLeft.textContent = 'Остават ' + (MIN_ORDER_AMOUNT - total).toFixed(2) + ' €';
+      if(minProgress) minProgress.style.background = 'var(--rose)';
+      if(checkoutBtn) { checkoutBtn.disabled = true; checkoutBtn.style.opacity = '0.5'; checkoutBtn.textContent = 'Мин. поръчка 10 €'; }
+    }
+  }
+}
+
 function addToCart(id) {
   const strId = String(id);
   const p = PRODUCTS.find(x => String(x.id) === strId);
@@ -1372,7 +1443,7 @@ function addToCart(id) {
     existing.qty++;
   } else {
     if(maxQty === 0) { alert('Продуктът е изчерпан.'); return; }
-    cart.push({ key, id, name:p.name, emoji:p.emoji, size:sizeLabel, color, price, qty:1 });
+    cart.push({ key, id, name:p.name, emoji:p.emoji, image:p.image||null, size:sizeLabel, color, price, qty:1 });
   }
   updateCart();
   // flash cart button
@@ -1435,26 +1506,47 @@ function updateCart() {
 
   const el = document.getElementById('cart-items');
   if(!cart.length) {
-    el.innerHTML = '<p style="color:var(--text-light);font-size:14px;text-align:center;margin-top:40px;">Количката е празна 🌸</p>';
+    el.innerHTML = '<p style="color:var(--text-light);font-size:14px;text-align:center;margin-top:40px;padding:20px;">Количката е празна 🌸</p>';
     return;
   }
-  el.innerHTML = cart.map(item => `
-    <div class="cart-item">
-      <div class="cart-item-icon">${item.emoji}</div>
-      <div class="cart-item-info">
-        <h5>${item.name}</h5>
-        <p>${[item.size, item.color].filter(Boolean).join(' · ')} · ${item.price.toFixed(2)} € / бр.</p>
-        <div class="cart-qty">
+  const rows = cart.map(item => {
+    const p = PRODUCTS.find(x => String(x.id) === String(item.id));
+    const maxQty = p ? (p.qty || 999) : 999;
+    const imgCell = item.image
+      ? `<img src="${item.image}" alt="" class="cart-thumb" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="cart-thumb-emoji" style="display:none;">${item.emoji||'🌸'}</div>`
+      : `<div class="cart-thumb-emoji">${item.emoji||'🌸'}</div>`;
+    const sub = [item.size, item.color].filter(Boolean).join(' · ');
+    return `<tr>
+      <td style="width:48px;padding:6px 4px 6px 10px;">${imgCell}</td>
+      <td>
+        <div class="cart-item-name">${item.name}</div>
+        ${sub ? `<div class="cart-item-sub">${sub}</div>` : ''}
+      </td>
+      <td style="white-space:nowrap;">
+        <div class="qty-controls">
           <button class="qty-btn" onclick="changeQty('${item.key}',-1)">−</button>
-          <span class="qty-num">${item.qty}</span>
+          <input class="qty-num-input" type="number" min="1" max="${maxQty}"
+            value="${item.qty}"
+            onchange="setQty('${item.key}',this.value,${maxQty})"
+            oninput="setQty('${item.key}',this.value,${maxQty})">
           <button class="qty-btn" onclick="changeQty('${item.key}',1)">+</button>
         </div>
-      </div>
-      <div>
-        <div class="cart-item-price">${(item.price*item.qty).toFixed(2)} €</div>
-        <button class="cart-item-remove" onclick="removeFromCart('${item.key}')">✕</button>
-      </div>
-    </div>`).join('');
+      </td>
+      <td class="cart-item-price">${item.price.toFixed(2)} €</td>
+      <td class="cart-item-total">${(item.price*item.qty).toFixed(2)} €</td>
+      <td><button class="cart-remove" onclick="removeFromCart('${item.key}')" title="Премахни">✕</button></td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `<table class="cart-table">
+    <thead><tr>
+      <th colspan="2">Продукт</th>
+      <th>Бр.</th>
+      <th>Ед. цена</th>
+      <th>Сума</th>
+      <th></th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 
 function toggleCart() {
@@ -1518,7 +1610,43 @@ async function confirmOrder() {
   }
 
   const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
-  const itemsList = cart.map(i => i.name + (i.size?' ('+i.size+')':'') + (i.color?' - '+i.color:'') + ' x'+i.qty+' = '+(i.price*i.qty).toFixed(2)+' EUR').join('\n');
+
+  // HTML таблица за имейла
+  const tableRows = cart.map((i, idx) => {
+    const bg = idx % 2 === 0 ? '#ffffff' : '#fdf0f5';
+    const sub = [i.size, i.color].filter(Boolean).join(' / ') || '—';
+    return `<tr style="background:${bg};">
+      <td style="padding:8px 12px;border:1px solid #f0d8e8;">${i.name}</td>
+      <td style="padding:8px 12px;border:1px solid #f0d8e8;text-align:center;color:#888;">${sub}</td>
+      <td style="padding:8px 12px;border:1px solid #f0d8e8;text-align:center;font-weight:700;">${i.qty}</td>
+      <td style="padding:8px 12px;border:1px solid #f0d8e8;text-align:right;">${i.price.toFixed(2)} €</td>
+      <td style="padding:8px 12px;border:1px solid #f0d8e8;text-align:right;font-weight:700;color:#C8748A;">${(i.price*i.qty).toFixed(2)} €</td>
+    </tr>`;
+  }).join('');
+
+  const orderItemsHtml = `<table style="width:100%;border-collapse:collapse;font-size:14px;font-family:Arial,sans-serif;">
+    <thead>
+      <tr style="background:#3d1a32;color:#ffffff;">
+        <th style="padding:10px 12px;text-align:left;border:1px solid #5a2d4a;">Продукт</th>
+        <th style="padding:10px 12px;text-align:center;border:1px solid #5a2d4a;">Цвят/Размер</th>
+        <th style="padding:10px 12px;text-align:center;border:1px solid #5a2d4a;">Бр.</th>
+        <th style="padding:10px 12px;text-align:right;border:1px solid #5a2d4a;">Ед. цена</th>
+        <th style="padding:10px 12px;text-align:right;border:1px solid #5a2d4a;">Сума</th>
+      </tr>
+    </thead>
+    <tbody>${tableRows}</tbody>
+    <tfoot>
+      <tr style="background:#fdf6fb;">
+        <td colspan="4" style="padding:10px 12px;border:1px solid #f0d8e8;text-align:right;font-weight:700;">Обща сума:</td>
+        <td style="padding:10px 12px;border:1px solid #f0d8e8;text-align:right;font-weight:700;font-size:16px;color:#C8748A;">${total.toFixed(2)} €</td>
+      </tr>
+    </tfoot>
+  </table>
+  <p style="margin-top:18px;font-size:13px;color:#666;font-family:Arial,sans-serif;">
+    Благодарим Ви за поръчката! 🌸 Ще се свържем с Вас скоро за потвърждение.<br>
+    <strong>Роза-Мимоза</strong> · <a href="https://www.facebook.com/rozamimoza" style="color:#C8748A;">Facebook страница</a>
+  </p>`;
+
   const itemsShort = cart.map(i => i.name + ' x' + i.qty).join(', ');
 
   // Disable button
@@ -1585,13 +1713,13 @@ async function confirmOrder() {
 
       // Подготви данните като чисти стрингове
       const emailData = {
-        customer_name: String(name),
+        customer_name:  String(name),
         customer_email: String(email),
         customer_phone: String(phone),
-        customer_city: String(city),
-        order_items: String(itemsList),
-        order_total: String(total.toFixed(2)) + ' EUR',
-        order_note: String(note || 'Няма'),
+        customer_city:  String(fullCity || city),
+        order_items:    orderItemsHtml,
+        order_total:    String(total.toFixed(2)) + ' EUR',
+        order_note:     String(note || 'Няма'),
       };
 
       console.log('Изпращане на имейл...', emailData);

@@ -969,18 +969,12 @@ async function loadAll() {
     orders = (oRes.data || []).map(o => ({
       id: o.id, name: o.customer_name, phone: o.phone,
       email: o.email || '', city: o.city,
+      itemsRaw: Array.isArray(o.items) ? o.items : [],
       items: Array.isArray(o.items)
-        ? o.items.map(i => {
-            if(typeof i === 'object') {
-              let s = i.name || '';
-              if(i.qty) s += ' x' + i.qty;
-              if(i.size) s += ' (' + i.size + ')';
-              if(i.color) s += ' - ' + i.color;
-              return s;
-            }
-            return String(i);
-          }).join(', ')
-        : String(o.items),
+        ? o.items.map(i => typeof i === 'object'
+            ? [i.name, i.qty ? 'x'+i.qty : '', i.size ? '('+i.size+')' : '', i.color ? '- '+i.color : ''].filter(Boolean).join(' ')
+            : String(i)).join(', ')
+        : String(o.items || ''),
       total: parseFloat(o.total), status: o.status,
       date: (o.created_at || '').split('T')[0], note: o.note || ''
     }));
@@ -1179,6 +1173,36 @@ function getOrdersSorted(list) {
   }
 }
 
+function renderItemsTable(o) {
+  const rows = o.itemsRaw && o.itemsRaw.length ? o.itemsRaw : null;
+  if(!rows) return `<span style="font-size:12px;color:var(--text-light);">${o.items || '—'}</span>`;
+  const head = `<tr style="background:var(--rose);color:#fff;">
+    <th style="padding:3px 6px;font-weight:600;text-align:left;">Модел</th>
+    <th style="padding:3px 6px;font-weight:600;text-align:center;">Размер</th>
+    <th style="padding:3px 6px;font-weight:600;text-align:center;">Бр.</th>
+    <th style="padding:3px 6px;font-weight:600;text-align:right;">Ед.</th>
+    <th style="padding:3px 6px;font-weight:600;text-align:right;">Сума</th>
+  </tr>`;
+  const bodyRows = rows.map((i, idx) => {
+    const name  = i.name  || i;
+    const size  = i.size  || '—';
+    const qty   = i.qty   || 1;
+    const price = i.price ? parseFloat(i.price).toFixed(2) : '—';
+    const sum   = i.price ? (parseFloat(i.price) * qty).toFixed(2) : '—';
+    const bg = idx % 2 === 0 ? '#fff' : '#fdf6fb';
+    return `<tr style="background:${bg};">
+      <td style="padding:3px 6px;white-space:nowrap;">${name}</td>
+      <td style="padding:3px 6px;text-align:center;color:var(--text-light);">${size}</td>
+      <td style="padding:3px 6px;text-align:center;font-weight:600;">${qty}</td>
+      <td style="padding:3px 6px;text-align:right;">${price} €</td>
+      <td style="padding:3px 6px;text-align:right;font-weight:600;">${sum} €</td>
+    </tr>`;
+  }).join('');
+  return `<table style="width:100%;border-collapse:collapse;font-size:11px;font-family:'Lato',sans-serif;border:1px solid var(--rose-light);border-radius:6px;overflow:hidden;">
+    <thead>${head}</thead><tbody>${bodyRows}</tbody>
+  </table>`;
+}
+
 function renderOrders() {
   let filtered = orders.filter(o => {
     const q = (orderFilter||'').toLowerCase();
@@ -1219,7 +1243,7 @@ function renderOrders() {
         </td>
         <td>${o.phone}</td>
         <td style="font-size:12px;">${o.city}</td>
-        <td style="font-size:12px;max-width:150px;">${o.items}</td>
+        <td style="max-width:220px;min-width:160px;">${renderItemsTable(o)}</td>
         <td><strong>${o.total.toFixed(2)} €</strong></td>
         <td>
           <select onchange="changeOrderStatus(${o.id},this.value)"
