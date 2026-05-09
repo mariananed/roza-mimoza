@@ -1686,7 +1686,7 @@ async function confirmOrder() {
         customer_name:  String(name),
         customer_email: String(email),
         customer_phone: String(phone),
-        customer_city:  String(fullCity || city),
+        customer_city:  String(city),
         order_items:    orderItemsHtml,
         order_total:    String(total.toFixed(2)) + ' EUR',
         order_note:     String(note || 'Няма'),
