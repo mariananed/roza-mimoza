@@ -1678,12 +1678,10 @@ async function confirmOrder() {
   }
 
   // 2. Изпрати имейл с EmailJS
+  let emailSent = false;
   if(typeof emailjs !== 'undefined' && window.EMAILJS_PUBLIC_KEY && window.EMAILJS_SERVICE_ID && window.EMAILJS_TEMPLATE_ID) {
     try {
-      // Инициализирай EmailJS
       emailjs.init(window.EMAILJS_PUBLIC_KEY);
-
-      // Подготви данните като чисти стрингове
       const emailData = {
         customer_name:  String(name),
         customer_email: String(email),
@@ -1693,19 +1691,27 @@ async function confirmOrder() {
         order_total:    String(total.toFixed(2)) + ' EUR',
         order_note:     String(note || 'Няма'),
       };
-
-      console.log('Изпращане на имейл...', emailData);
+      console.log('Изпращане на имейл към:', email, emailData);
       const result = await emailjs.send(
         window.EMAILJS_SERVICE_ID,
         window.EMAILJS_TEMPLATE_ID,
         emailData
       );
-      console.log('Имейл изпратен успешно:', result.status, result.text);
+      emailSent = true;
+      console.log('✅ Имейл изпратен успешно:', result.status, result.text);
     } catch(e) {
-      console.error('EmailJS грешка:', e);
+      console.error('❌ EmailJS грешка:', e);
+      // Покажи грешката видимо за диагностика
+      alert('⚠️ Имейл грешка: ' + (e.text || e.message || JSON.stringify(e)) + '\n\nПоръчката е записана успешно. Свържете се с нас по телефон.');
     }
   } else {
-    console.warn('EmailJS не е конфигуриран — провери supabase-config.js');
+    console.warn('EmailJS не е конфигуриран:', {
+      emailjs: typeof emailjs,
+      key: !!window.EMAILJS_PUBLIC_KEY,
+      service: !!window.EMAILJS_SERVICE_ID,
+      template: !!window.EMAILJS_TEMPLATE_ID
+    });
+    alert('⚠️ Имейл системата не е конфигурирана. Поръчката е записана.');
   }
 
   // 3. Покажи успех
