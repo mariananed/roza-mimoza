@@ -756,7 +756,7 @@
     <div class="info-icon">🚚</div>
     <div class="info-text">
       <h5>Доставка с Еконт</h5>
-      <p>Наложен платеж. Само за България. Изпращам до 3 работни дни.</p>
+      <p>Наложен платеж. Само за България. Изпращам до 2 работни дни.</p>
     </div>
   </div>
   <div class="info-item">
@@ -1611,41 +1611,13 @@ async function confirmOrder() {
 
   const total = cart.reduce((s,i) => s + i.price * i.qty, 0);
 
-  // HTML таблица за имейла
-  const tableRows = cart.map((i, idx) => {
-    const bg = idx % 2 === 0 ? '#ffffff' : '#fdf0f5';
-    const sub = [i.size, i.color].filter(Boolean).join(' / ') || '—';
-    return `<tr style="background:${bg};">
-      <td style="padding:8px 12px;border:1px solid #f0d8e8;">${i.name}</td>
-      <td style="padding:8px 12px;border:1px solid #f0d8e8;text-align:center;color:#888;">${sub}</td>
-      <td style="padding:8px 12px;border:1px solid #f0d8e8;text-align:center;font-weight:700;">${i.qty}</td>
-      <td style="padding:8px 12px;border:1px solid #f0d8e8;text-align:right;">${i.price.toFixed(2)} €</td>
-      <td style="padding:8px 12px;border:1px solid #f0d8e8;text-align:right;font-weight:700;color:#C8748A;">${(i.price*i.qty).toFixed(2)} €</td>
-    </tr>`;
-  }).join('');
+  // Текстово форматиране на продуктите за имейла (съвместимо с всички имейл клиенти)
+  const orderItemsText = cart.map((i, idx) => {
+    const sub = [i.size, i.color].filter(Boolean).join(' / ');
+    return `${idx+1}. ${i.name}${sub ? ' ('+sub+')' : ''} — ${i.qty} бр. × ${i.price.toFixed(2)} € = ${(i.price*i.qty).toFixed(2)} €`;
+  }).join('\n');
 
-  const orderItemsHtml = `<table style="width:100%;border-collapse:collapse;font-size:14px;font-family:Arial,sans-serif;">
-    <thead>
-      <tr style="background:#3d1a32;color:#ffffff;">
-        <th style="padding:10px 12px;text-align:left;border:1px solid #5a2d4a;">Продукт</th>
-        <th style="padding:10px 12px;text-align:center;border:1px solid #5a2d4a;">Цвят/Размер</th>
-        <th style="padding:10px 12px;text-align:center;border:1px solid #5a2d4a;">Бр.</th>
-        <th style="padding:10px 12px;text-align:right;border:1px solid #5a2d4a;">Ед. цена</th>
-        <th style="padding:10px 12px;text-align:right;border:1px solid #5a2d4a;">Сума</th>
-      </tr>
-    </thead>
-    <tbody>${tableRows}</tbody>
-    <tfoot>
-      <tr style="background:#fdf6fb;">
-        <td colspan="4" style="padding:10px 12px;border:1px solid #f0d8e8;text-align:right;font-weight:700;">Обща сума:</td>
-        <td style="padding:10px 12px;border:1px solid #f0d8e8;text-align:right;font-weight:700;font-size:16px;color:#C8748A;">${total.toFixed(2)} €</td>
-      </tr>
-    </tfoot>
-  </table>
-  <p style="margin-top:18px;font-size:13px;color:#666;font-family:Arial,sans-serif;">
-    Благодарим Ви за поръчката! 🌸 Ще се свържем с Вас скоро за потвърждение.<br>
-    <strong>Роза-Мимоза</strong> · <a href="https://www.facebook.com/rozamimoza" style="color:#C8748A;">Facebook страница</a>
-  </p>`;
+  const orderItemsHtml = orderItemsText;
 
   const itemsShort = cart.map(i => i.name + ' x' + i.qty).join(', ');
 
