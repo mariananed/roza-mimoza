@@ -1210,28 +1210,29 @@ function renderItemsTable(o) {
   }
 
   const head = `<tr style="background:var(--rose);color:#fff;">
-    <th style="padding:3px 6px;font-weight:600;text-align:left;">Модел</th>
+    <th style="padding:3px 6px;font-weight:600;text-align:left;">Продукт</th>
+    <th style="padding:3px 6px;font-weight:600;text-align:center;">Цвят</th>
     <th style="padding:3px 6px;font-weight:600;text-align:center;">Размер</th>
     <th style="padding:3px 6px;font-weight:600;text-align:center;">Бр.</th>
-    <th style="padding:3px 6px;font-weight:600;text-align:right;">Ед.</th>
+    <th style="padding:3px 6px;font-weight:600;text-align:right;">Ед. цена</th>
     <th style="padding:3px 6px;font-weight:600;text-align:right;">Сума</th>
   </tr>`;
 
   const bodyRows = rows.map((i, idx) => {
     const name  = typeof i === 'object' ? (i.name  || '—') : String(i);
+    const color = typeof i === 'object' ? (i.color || '—') : '—';
     const size  = typeof i === 'object' ? (i.size  || '—') : '—';
-    const color = typeof i === 'object' ? (i.color || '')  : '';
     const qty   = typeof i === 'object' ? (i.qty   || 1)  : 1;
-    const price = (typeof i === 'object' && i.price) ? parseFloat(i.price).toFixed(2) : '—';
-    const sum   = (typeof i === 'object' && i.price) ? (parseFloat(i.price) * qty).toFixed(2) : '—';
-    const nameCell = color ? `${name}<br><span style="font-size:10px;color:var(--text-light);">${color}</span>` : name;
+    const price = (typeof i === 'object' && i.price) ? parseFloat(i.price).toFixed(2) + ' €' : '—';
+    const sum   = (typeof i === 'object' && i.price) ? (parseFloat(i.price) * qty).toFixed(2) + ' €' : '—';
     const bg = idx % 2 === 0 ? '#fff' : '#fdf6fb';
     return `<tr style="background:${bg};">
-      <td style="padding:3px 6px;">${nameCell}</td>
+      <td style="padding:3px 6px;">${name}</td>
+      <td style="padding:3px 6px;text-align:center;color:var(--text-light);">${color}</td>
       <td style="padding:3px 6px;text-align:center;color:var(--text-light);">${size}</td>
       <td style="padding:3px 6px;text-align:center;font-weight:600;">${qty}</td>
-      <td style="padding:3px 6px;text-align:right;">${price !== '—' ? price + ' €' : '—'}</td>
-      <td style="padding:3px 6px;text-align:right;font-weight:600;">${sum !== '—' ? sum + ' €' : '—'}</td>
+      <td style="padding:3px 6px;text-align:right;">${price}</td>
+      <td style="padding:3px 6px;text-align:right;font-weight:600;">${sum}</td>
     </tr>`;
   }).join('');
 
@@ -1390,16 +1391,27 @@ async function saveOrUpdateOrder() {
   };
 
   if(editingOrderId !== null) {
-    // ── Редактиране ──
+    // ── Редактиране — НЕ презаписваме items (пазим оригиналния JSON с продуктите)
+    const editPayload = {
+      customer_name: name,
+      phone,
+      email:  document.getElementById('om-email').value  || '',
+      city,
+      total:  parseFloat(document.getElementById('om-total').value)  || 0,
+      status: document.getElementById('om-status').value || 'pending',
+      note:   document.getElementById('om-note').value   || '',
+    };
     if(isConfigured()) {
-      const { error } = await sb.from('orders').update(payload).eq('id', editingOrderId);
+      const { error } = await sb.from('orders').update(editPayload).eq('id', editingOrderId);
       if(error) { alert('Грешка при запис: ' + error.message); return; }
     }
     const o = orders.find(x => Number(x.id) === editingOrderId);
     if(o) {
-      o.name   = name;   o.phone  = phone; o.email  = payload.email;
-      o.city   = city;   o.items  = payload.items;
-      o.total  = payload.total; o.status = payload.status; o.note = payload.note;
+      o.name   = name;        o.phone  = phone;
+      o.email  = editPayload.email;  o.city   = city;
+      o.total  = editPayload.total;
+      o.status = editPayload.status; o.note   = editPayload.note;
+      // o.items и o.itemsRaw се запазват непроменени
     }
   } else {
     // ── Нова поръчка ──
@@ -2208,16 +2220,17 @@ function printOrder(id) {
   let itemsTableHtml = '';
   if(o.itemsRaw && o.itemsRaw.length) {
     const rows = o.itemsRaw.map((i, idx) => {
-      const bg = idx % 2 === 0 ? '#fff' : '#fdf6fb';
+      const bg    = idx % 2 === 0 ? '#fff' : '#fdf6fb';
       const name  = i.name  || '—';
+      const color = i.color || '—';
       const size  = i.size  || '—';
-      const color = i.color || '';
       const qty   = i.qty   || 1;
       const price = i.price ? parseFloat(i.price).toFixed(2) + ' €' : '—';
       const sum   = i.price ? (parseFloat(i.price) * qty).toFixed(2) + ' €' : '—';
       return `<tr style="background:${bg};">
-        <td style="padding:6px 10px;border:1px solid #f0d8e8;">${name}${color ? '<br><span style="font-size:10px;color:#999;">'+color+'</span>' : ''}</td>
-        <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:center;">${size}</td>
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;">${name}</td>
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:center;color:#777;">${color}</td>
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:center;color:#777;">${size}</td>
         <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:center;font-weight:700;">${qty}</td>
         <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:right;">${price}</td>
         <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:right;font-weight:700;">${sum}</td>
@@ -2226,6 +2239,7 @@ function printOrder(id) {
     itemsTableHtml = `<table style="width:100%;border-collapse:collapse;font-size:12px;">
       <thead><tr style="background:#3d1a32;color:#fff;">
         <th style="padding:7px 10px;text-align:left;">Продукт</th>
+        <th style="padding:7px 10px;text-align:center;">Цвят</th>
         <th style="padding:7px 10px;text-align:center;">Размер</th>
         <th style="padding:7px 10px;text-align:center;">Бр.</th>
         <th style="padding:7px 10px;text-align:right;">Ед. цена</th>
@@ -2241,11 +2255,14 @@ function printOrder(id) {
       const qtyMatch = part.match(/x(\d+)/i);
       const qty = qtyMatch ? qtyMatch[1] : '1';
       const dashIdx = part.indexOf(' - ');
-      const color = dashIdx >= 0 ? part.slice(dashIdx + 3).trim() : '';
+      const color = dashIdx >= 0 ? part.slice(dashIdx + 3).trim() : '—';
+      const sizeMatch = part.match(/(\d+[\.,]?\d*\s*см|малки|пъпка|листо|клонче)/i);
+      const size = sizeMatch ? sizeMatch[1] : '—';
       const name = part.replace(/x\d+/i,'').replace(/ - .*/,'').replace(/\s+/g,' ').trim();
       return `<tr style="background:${bg};">
         <td style="padding:6px 10px;border:1px solid #f0d8e8;">${name}</td>
-        <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:center;color:#999;">${color || '—'}</td>
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:center;color:#777;">${color}</td>
+        <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:center;color:#777;">${size}</td>
         <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:center;font-weight:700;">${qty}</td>
         <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:right;">—</td>
         <td style="padding:6px 10px;border:1px solid #f0d8e8;text-align:right;">—</td>
@@ -2255,6 +2272,7 @@ function printOrder(id) {
       <thead><tr style="background:#3d1a32;color:#fff;">
         <th style="padding:7px 10px;text-align:left;">Продукт</th>
         <th style="padding:7px 10px;text-align:center;">Цвят</th>
+        <th style="padding:7px 10px;text-align:center;">Размер</th>
         <th style="padding:7px 10px;text-align:center;">Бр.</th>
         <th style="padding:7px 10px;text-align:right;">Ед. цена</th>
         <th style="padding:7px 10px;text-align:right;">Сума</th>
