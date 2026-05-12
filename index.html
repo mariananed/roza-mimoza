@@ -836,9 +836,9 @@
       <p style="font-size:13px;color:var(--text-mid);margin-bottom:12px;line-height:1.6;">Оставете запитване и ще се свържем с вас лично за уточняване на детайлите, срока за изработка и цената.</p>
       <input type="text" id="cf-name" placeholder="Вашето име *">
       <input type="email" id="cf-email" placeholder="Имейл адрес *">
-      <input type="tel" id="cf-phone" placeholder="Телефон (незадължително)">
+      <input type="tel" id="cf-phone" placeholder="Телефон *">
       <input type="text" id="cf-viber" placeholder="Viber / WhatsApp номер (незадължително)">
-      <input type="text" id="cf-messenger" placeholder="Messenger (facebook.com/вашето.име) (незадължително)">
+      <input type="text" id="cf-messenger" placeholder="Messenger (facebook.com/вашето.име) *">
       <select id="cf-cat">
         <option value="">— Категория цвете —</option>
         <option>Рози</option>
@@ -1735,7 +1735,9 @@ async function sendSpecialOrder() {
   const cat       = sanitizeInput('cf-cat');
   const msg       = sanitizeInput('cf-msg');
 
-  if(!name || !email) { alert('Моля въведете поне вашето име и имейл.'); return; }
+  if(!name || !email) { alert('Моля въведете вашето име и имейл.'); return; }
+  if(!phone) { alert('Моля въведете телефон за връзка.'); return; }
+  if(!messenger) { alert('Моля въведете Messenger профил за връзка.'); return; }
 
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if(!emailRe.test(email)) { alert('Моля въведете валиден имейл адрес.'); return; }
