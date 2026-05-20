@@ -1243,6 +1243,11 @@ function productCard(p) {
     <div class="product-info">
       <div class="cat-tag">${sd(catName(p.cat))}</div>
       <h4>${sd(p.name)}</h4>
+      <div style="margin-bottom:6px;">
+        <span style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.07em;color:var(--text-light);background:var(--rose-pale);border:1px solid var(--rose-light);border-radius:6px;padding:2px 8px;font-family:'Lato',sans-serif;">
+          🏷 ${generateSKU(p.cat, p.name)}
+        </span>
+      </div>
       ${descHtml}
       ${matHtml}
       ${stockHtml}
@@ -1354,6 +1359,66 @@ function selectSize(id, size, btn) {
 function selectColor(id, color, btn) {
   selectedColors[String(id)] = color;
   renderProducts();
+}
+
+// ── ГЕНЕРАТОР НА АРТИКУЛНИ КОДОВЕ ────────────────────
+// Взима категория (slug) и пълно име на продукта → връща кратък код
+// Работи автоматично за всички сегашни и бъдещи продукти
+function generateSKU(catSlug, productName) {
+  // 1. Префикс от категорията (3 букви, от slug → BG)
+  const catMap = {
+    'obiknoveni-tsvety': 'ОБИ', 'pelargoniu': 'ОБИ',
+    'rozi': 'РОЗ',
+    'gardenii': 'ГАР',
+    'koledni-zvezdi': 'КЗВ', 'koleda': 'КЗВ',
+    'kolektsii': 'КОЛ',
+    'lista': 'ЛИС',
+    'bozhuri': 'БОЖ',
+    'malki-tsvety': 'МАЛ', 'malki': 'МАЛ',
+    'spetsialni': 'СПЕ',
+    'pypki': 'ПЪП',
+  };
+  // Ако slug-ът не е в картата — вземаме първите 3 букви от slug-а и ги транслитерираме
+  let catPrefix = catMap[catSlug] || slugToPrefix(catSlug);
+
+  // 2. Извличаме размера от края на името (2 см, 2.5 см, 4cm и т.н.)
+  const sizeMatch = productName.match(/(\d+[.,]?\d*)\s*см/i) || productName.match(/(\d+[.,]?\d*)\s*cm/i);
+  const size = sizeMatch ? sizeMatch[1].replace(',', '.') : '';
+
+  // 3. Извличаме ключовата дума (след вида цвете, преди размера)
+  // Махаме размера от края и вземаме думите
+  const nameClean = productName
+    .replace(/\d+[.,]?\d*\s*(см|cm)/gi, '')
+    .replace(/комплект/gi, '')
+    .trim();
+
+  const words = nameClean.split(/\s+/).filter(w => w.length > 1);
+  // Вземаме втората дума ако има (тя обикновено е цвета), иначе първата
+  const keyWord = words.length >= 2 ? words[1] : words[0] || '';
+  const keyPrefix = keyWord.substring(0, 3).toUpperCase();
+
+  // 4. Сглобяваме кода
+  const parts = [catPrefix, keyPrefix];
+  if(size) parts.push(size);
+  return parts.join('-');
+}
+
+function slugToPrefix(slug) {
+  // Транслитерация на латиница към кирилица за непознати категории
+  const map = {'a':'А','b':'Б','v':'В','g':'Г','d':'Д','e':'Е','zh':'Ж','z':'З',
+    'i':'И','y':'Й','k':'К','l':'Л','m':'М','n':'Н','o':'О','p':'П','r':'Р',
+    's':'С','t':'Т','u':'У','f':'Ф','h':'Х','ts':'Ц','ch':'Ч','sh':'Ш',
+    'sht':'Щ','yu':'Ю','ya':'Я'};
+  let result = slug.replace(/-.*/, ''); // само първата дума
+  let out = '';
+  let i = 0;
+  while(i < result.length && out.length < 3) {
+    if(map[result.slice(i,i+3)]) { out += map[result.slice(i,i+3)]; i+=3; }
+    else if(map[result.slice(i,i+2)]) { out += map[result.slice(i,i+2)]; i+=2; }
+    else if(map[result[i]]) { out += map[result[i]]; i++; }
+    else { out += result[i].toUpperCase(); i++; }
+  }
+  return out.substring(0,3);
 }
 
 function clampQtyField(input, max) {
