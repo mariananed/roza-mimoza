@@ -1362,39 +1362,40 @@ function selectColor(id, color, btn) {
 }
 
 // ── ГЕНЕРАТОР НА АРТИКУЛНИ КОДОВЕ ────────────────────
-// Взима категория (slug) и пълно име на продукта → връща кратък код
-// Работи автоматично за всички сегашни и бъдещи продукти
-function generateSKU(catSlug, productName) {
-  // 1. Префикс от категорията (3 букви, от slug → BG)
-  const catMap = {
-    'obiknoveni-tsvety': 'ОБИ', 'pelargoniu': 'ОБИ',
-    'rozi': 'РОЗ',
-    'gardenii': 'ГАР',
-    'koledni-zvezdi': 'КЗВ', 'koleda': 'КЗВ',
-    'kolektsii': 'КОЛ',
-    'lista': 'ЛИС',
-    'bozhuri': 'БОЖ',
-    'malki-tsvety': 'МАЛ', 'malki': 'МАЛ',
-    'spetsialni': 'СПЕ',
-    'pypki': 'ПЪП',
-  };
-  // Ако slug-ът не е в картата — вземаме първите 3 букви от slug-а и ги транслитерираме
-  let catPrefix = catMap[catSlug] || slugToPrefix(catSlug);
+// Динамичен — чете категориите от CATS_MAP (зареден от Supabase).
+// При нова категория в админа → кодът я познава автоматично.
 
-  // 2. Извличаме размера от края на името (2 см, 2.5 см, 4cm и т.н.)
-  const sizeMatch = productName.match(/(\d+[.,]?\d*)\s*см/i) || productName.match(/(\d+[.,]?\d*)\s*cm/i);
+// Думи които се прескачат при търсене на ключовата дума (цвят/характеристика)
+const SKU_SKIP_WORDS = ['звезда','цвете','цветя','роза','рози','гардения',
+  'клонче','листо','пъпка','маргаритка','божур','колекция','комплект'];
+
+function generateSKU(catSlug, productName) {
+  // 1. Префикс от категорията — генерира се от BG името в CATS_MAP
+  //    Така всяка нова категория се поддържа автоматично
+  const catBGName = CATS_MAP[catSlug] || '';
+  let catPrefix = catBGName
+    ? bgToPrefix(catBGName)       // от българско име
+    : slugToPrefix(catSlug);      // fallback от slug ако няма BG име
+
+  // 2. Извличаме размера от края на името
+  const sizeMatch = productName.match(/(\d+[.,]?\d*)\s*(см|cm)/i);
   const size = sizeMatch ? sizeMatch[1].replace(',', '.') : '';
 
-  // 3. Извличаме ключовата дума (след вида цвете, преди размера)
-  // Махаме размера от края и вземаме думите
+  // 3. Намираме ключовата дума (цвят/характеристика) —
+  //    прескачаме познатите видове цветя и вземаме следващата дума
   const nameClean = productName
     .replace(/\d+[.,]?\d*\s*(см|cm)/gi, '')
-    .replace(/комплект/gi, '')
     .trim();
-
   const words = nameClean.split(/\s+/).filter(w => w.length > 1);
-  // Вземаме втората дума ако има (тя обикновено е цвета), иначе първата
-  const keyWord = words.length >= 2 ? words[1] : words[0] || '';
+  let keyWord = '';
+  for(let w of words) {
+    if(!SKU_SKIP_WORDS.includes(w.toLowerCase())) {
+      keyWord = w;
+      break;
+    }
+  }
+  // Ако всички думи са в skip списъка — вземаме последната
+  if(!keyWord) keyWord = words[words.length - 1] || '';
   const keyPrefix = keyWord.substring(0, 3).toUpperCase();
 
   // 4. Сглобяваме кода
@@ -1403,15 +1404,20 @@ function generateSKU(catSlug, productName) {
   return parts.join('-');
 }
 
+// Генерира 3-буквен префикс от българско название на категория
+// Напр. "Коледни цветя" → "КОЛ", "Обикновени цветя" → "ОБИ"
+function bgToPrefix(bgName) {
+  return bgName.trim().substring(0, 3).toUpperCase();
+}
+
 function slugToPrefix(slug) {
-  // Транслитерация на латиница към кирилица за непознати категории
+  // Транслитерация латиница → кирилица за fallback при липса на BG име
   const map = {'a':'А','b':'Б','v':'В','g':'Г','d':'Д','e':'Е','zh':'Ж','z':'З',
     'i':'И','y':'Й','k':'К','l':'Л','m':'М','n':'Н','o':'О','p':'П','r':'Р',
     's':'С','t':'Т','u':'У','f':'Ф','h':'Х','ts':'Ц','ch':'Ч','sh':'Ш',
     'sht':'Щ','yu':'Ю','ya':'Я'};
-  let result = slug.replace(/-.*/, ''); // само първата дума
-  let out = '';
-  let i = 0;
+  let result = slug.replace(/-.*/, '');
+  let out = '', i = 0;
   while(i < result.length && out.length < 3) {
     if(map[result.slice(i,i+3)]) { out += map[result.slice(i,i+3)]; i+=3; }
     else if(map[result.slice(i,i+2)]) { out += map[result.slice(i,i+2)]; i+=2; }
