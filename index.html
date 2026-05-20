@@ -640,7 +640,29 @@
     footer { padding: 30px 16px; }
     .info-strip { padding: 20px 16px; }
     .hero-content h2 { font-size: 28px; }
-    .cart-sidebar { width: 100%; }
+    /* Количка на мобилни — пълноширока, slide от дясно */
+    .cart-sidebar {
+      width: 100%;
+      right: -100vw;
+      top: 0; bottom: 0;
+      display: flex; flex-direction: column;
+      max-height: 100dvh; /* dvh = dynamic viewport height, отчита адрес лентата на браузъра */
+    }
+    .cart-sidebar.open { right: 0; }
+    /* Таблицата с продукти скролира, footer стои фиксиран отдолу */
+    .cart-items {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch; /* плавен скрол на iOS */
+      padding-bottom: 8px;
+    }
+    /* По-удобни за пръсти бутони за количество */
+    .qty-btn { width: 32px; height: 32px; font-size: 16px; }
+    .qty-num-input { width: 42px; height: 32px; font-size: 14px; }
+    /* Таблицата с количката — по-компактна на малък екран */
+    .cart-table { font-size: 12px; }
+    .cart-table th { font-size: 10px; padding: 6px 4px; }
+    .cart-table td { padding: 5px 4px; }
   }
 </style>
 </head>
@@ -1209,7 +1231,8 @@ function productCard(p) {
     : `<div style="display:flex;align-items:center;gap:6px;">
         <input type="number" id="qty-field-${p.id}" min="1" max="${qty||999}" value="1"
           style="width:52px;height:38px;border:1px solid var(--rose-light);border-radius:10px;text-align:center;font-size:14px;font-family:'Lato',sans-serif;color:var(--text-dark);background:var(--rose-pale);padding:0;"
-          oninput="clampQtyField(this,${qty||999})">
+          oninput="clampQtyField(this,${qty||999})"
+          onblur="finalizeQtyField(this,${qty||999})">
         <button class="add-btn" onclick="addToCartQty('${p.id}')">+ Добави</button>
       </div>`;
 
@@ -1334,8 +1357,21 @@ function selectColor(id, color, btn) {
 }
 
 function clampQtyField(input, max) {
-  let v = parseInt(input.value) || 1;
+  // Ако полето е празно (потребителят изтрива за да пише ново число) — не пипаме
+  if(input.value === '' || input.value === '-') return;
+  let v = parseInt(input.value);
+  // Ако все още не е валидно число — изчистваме без да принудително пишем нещо
+  if(isNaN(v)) { input.value = ''; return; }
   if(v < 1) v = 1;
+  if(v > max) v = max;
+  // Пишем само ако стойността реално се е променила (избягва проблем с cursor position)
+  if(parseInt(input.value) !== v) input.value = v;
+}
+
+function finalizeQtyField(input, max) {
+  // Викa се при onblur — затваряме дупките: ако е празно или 0, връщаме 1
+  let v = parseInt(input.value);
+  if(isNaN(v) || v < 1) v = 1;
   if(v > max) v = max;
   input.value = v;
 }
