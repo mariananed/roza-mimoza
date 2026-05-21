@@ -553,7 +553,7 @@
       <!-- Add new category -->
       <div class="table-wrap" style="padding:20px;margin-bottom:20px;">
         <h3 style="font-family:'Playfair Display',serif;font-size:15px;color:var(--text-dark);margin-bottom:12px;">➕ Нова категория</h3>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;overflow:visible;position:relative;">
           <input id="new-cat-name" class="search-input" placeholder="Наименование на категорията..." maxlength="80" style="width:280px;"
             onkeydown="if(event.key==='Enter') addCategory()">
           <div style="position:relative;display:inline-block;">
@@ -563,7 +563,7 @@
               <span style="font-size:12px;color:var(--text-light);">Емоджи</span>
             </button>
             <input type="hidden" id="new-cat-emoji" value="🌸">
-            <div id="cat-emoji-picker" style="display:none;position:absolute;z-index:999;background:var(--white);border:1px solid var(--rose-light);border-radius:14px;padding:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);width:280px;max-height:320px;overflow-y:auto;top:110%;left:0;">
+            <div id="cat-emoji-picker" style="display:none;position:absolute;z-index:9999;background:var(--white);border:1px solid var(--rose-light);border-radius:14px;padding:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);width:280px;max-height:300px;overflow-y:auto;bottom:110%;left:0;">
             </div>
           </div>
           <button class="btn btn-primary btn-sm" onclick="addCategory()">+ Добави</button>
@@ -2732,12 +2732,24 @@ async function catDrop(e, destId) {
 
 // ── Rename ───────────────────────────────────────────
 function startCatRename(id) {
+  const cat = _cats.find(c => String(c.id) === String(id));
   document.getElementById('cat-name-display-' + id).style.display = 'none';
   const input = document.getElementById('cat-name-input-' + id);
   input.style.display = 'inline-block';
   input.focus(); input.select();
+  const emojiPickerId = 'cat-row-emoji-picker-' + id;
+  const currentEmoji = cat ? (cat.emoji || '🌸') : '🌸';
   const actions = document.getElementById('cat-actions-' + id);
   actions.innerHTML = `
+    <div style="display:inline-block;position:relative;margin-right:4px;vertical-align:middle;">
+      <button type="button" onclick="toggleEmojiPicker('cat-row-emoji-${id}','${emojiPickerId}')"
+        style="padding:5px 10px;font-size:18px;background:var(--rose-pale);border:1px solid var(--rose-light);border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+        <span id="cat-row-emoji-${id}-preview">${currentEmoji}</span>
+        <span style="font-size:11px;color:var(--text-light);">емоджи</span>
+      </button>
+      <input type="hidden" id="cat-row-emoji-${id}" value="${currentEmoji}">
+      <div id="${emojiPickerId}" style="display:none;position:absolute;z-index:9999;background:var(--white);border:1px solid var(--rose-light);border-radius:14px;padding:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);width:280px;max-height:300px;overflow-y:auto;bottom:110%;left:0;"></div>
+    </div>
     <button class="btn btn-primary btn-sm" onclick="saveCatRename('${id}')" style="margin-right:4px;">💾 Запази</button>
     <button class="btn btn-outline btn-sm" onclick="cancelCatRename('${id}')">✕</button>`;
 }
@@ -2750,17 +2762,19 @@ async function saveCatRename(id) {
   const cat = _cats.find(c => String(c.id) === String(id));
   if(!cat) return;
   const newSlug = slugify(newName);
+  const emojiInput = document.getElementById('cat-row-emoji-' + id);
+  const newEmoji = emojiInput ? emojiInput.value : (cat.emoji || '🌸');
 
   if(!cat._offline && isConfigured()) {
-    const { error } = await sb.from('categories').update({ name: newName, slug: newSlug }).eq('id', id);
+    const { error } = await sb.from('categories').update({ name: newName, slug: newSlug, emoji: newEmoji }).eq('id', id);
     if(error) { showCatMsg('❌ Грешка: ' + error.message, false); return; }
   }
   cat.name = newName;
   cat.slug = newSlug;
+  cat.emoji = newEmoji;
   renderCategories();
-  // Синхронизирай CATS обекта
   syncCatsToDropdowns();
-  showCatMsg('✅ Категорията е преименувана на „' + newName + '"', true);
+  showCatMsg('✅ Категорията е обновена на „' + newName + '"', true);
 }
 
 // ── Toggle visible ────────────────────────────────────
