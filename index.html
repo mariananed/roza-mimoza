@@ -475,6 +475,77 @@
   .contact-form button:hover { background: var(--text-mid); }
 
   /* ── CART SIDEBAR ── */
+  /* Toast известие */
+  .rm-toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #2d4a2d;
+    color: #fff;
+    border-radius: 12px;
+    padding: 11px 16px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    max-width: 90vw;
+  }
+  .rm-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+  }
+  .rm-toast-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: #fff;
+    border-radius: 7px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  /* Badge на количката */
+  .cart-btn { position: relative; }
+  .cart-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--rose);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 0 4px;
+    transition: transform 0.2s;
+  }
+  /* Бутон Продължи пазаруването — само на мобилни */
+  .cart-continue-btn { display: none; }
+  @media (max-width: 700px) {
+    .cart-continue-btn {
+      display: block;
+      width: 100%;
+      background: none;
+      border: 1.5px solid var(--rose);
+      color: var(--rose);
+      border-radius: 10px;
+      padding: 9px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      cursor: pointer;
+      font-family: 'Lato', sans-serif;
+    }
+  }
+
   .cart-overlay {
     position: fixed; inset: 0;
     background: rgba(60,20,30,0.35);
@@ -640,23 +711,19 @@
     footer { padding: 30px 16px; }
     .info-strip { padding: 20px 16px; }
     .hero-content h2 { font-size: 28px; }
-    /* Количка на мобилни — пълноширока, slide от дясно */
+    /* Количка на мобилни — управлява се изцяло от JS */
     .cart-sidebar {
       position: fixed !important;
-      left: 0 !important;
-      right: 0 !important;
-      top: 0 !important;
-      bottom: 0 !important;
+      top: 0 !important; left: 0 !important;
+      right: 0 !important; bottom: 0 !important;
       width: 100% !important;
-      max-width: 100vw !important;
-      transform: translateX(100%);
-      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
-      display: flex; flex-direction: column;
-      max-height: 100dvh;
+      max-height: 100% !important;
+      display: none !important;
+      flex-direction: column !important;
+      transition: none !important;
     }
     .cart-sidebar.open {
-      transform: translateX(0) !important;
-      right: 0 !important;
+      display: flex !important;
     }
     /* Таблицата с продукти скролира, footer стои фиксиран отдолу */
     .cart-items {
@@ -676,6 +743,13 @@
 </style>
 </head>
 <body>
+
+<!-- Toast известие -->
+<div class="rm-toast" id="rm-toast">
+  <span>✅</span>
+  <span id="rm-toast-msg">Добавено в количката</span>
+  <button class="rm-toast-btn" onclick="toggleCart()">Виж количката</button>
+</div>
 
 <!-- Admin bar (visible only to owner) -->
 <!-- Top promo bar -->
@@ -991,6 +1065,7 @@
     <p style="color:var(--text-light);font-size:14px;text-align:center;margin-top:40px;">Количката е празна 🌸</p>
   </div>
   <div class="cart-footer">
+    <button class="cart-continue-btn" onclick="toggleCart()">← Продължи пазаруването</button>
     <div class="cart-total">
       <span>Общо:</span>
       <strong id="cart-total">0.00 €</strong>
@@ -1448,6 +1523,16 @@ function finalizeQtyField(input, max) {
   input.value = v;
 }
 
+function showToast(name) {
+  const toast = document.getElementById('rm-toast');
+  const msg = document.getElementById('rm-toast-msg');
+  if(!toast) return;
+  if(msg) msg.textContent = (name || 'Продукт') + ' добавен в количката';
+  toast.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
 function addToCartQty(id) {
   const strId = String(id);
   const field = document.getElementById('qty-field-' + strId);
@@ -1485,6 +1570,8 @@ function addToCartQty(id) {
   const btn = document.getElementById('cart-count');
   btn.style.transform = 'scale(1.4)';
   setTimeout(() => btn.style.transform = '', 200);
+  // Toast известие (само на мобилни)
+  if(isMobile()) showToast(p.name);
 }
 
 function setQty(key, val, maxQty) {
@@ -1657,9 +1744,27 @@ function updateCart() {
   </table>`;
 }
 
+function isMobile() { return window.innerWidth <= 700; }
+
 function toggleCart() {
-  document.getElementById('cart-sidebar').classList.toggle('open');
-  document.getElementById('cart-overlay').classList.toggle('open');
+  const sidebar = document.getElementById('cart-sidebar');
+  const overlay = document.getElementById('cart-overlay');
+  const isOpen = sidebar.classList.contains('open');
+  if(isOpen) {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+    if(isMobile()) {
+      // Връщаме desktop стила за да не се показва на мобилни
+      sidebar.style.display = '';
+    }
+  } else {
+    sidebar.classList.add('open');
+    overlay.classList.add('open');
+    if(isMobile()) {
+      // Принудително показваме на целия екран
+      sidebar.style.cssText = 'display:flex !important; flex-direction:column; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; z-index:201; background:#fff; overflow:hidden;';
+    }
+  }
 }
 
 function checkout() {
