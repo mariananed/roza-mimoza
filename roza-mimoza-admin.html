@@ -556,7 +556,16 @@
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
           <input id="new-cat-name" class="search-input" placeholder="Наименование на категорията..." maxlength="80" style="width:280px;"
             onkeydown="if(event.key==='Enter') addCategory()">
-          <input id="new-cat-emoji" class="search-input" placeholder="🌸 Емоджи" maxlength="4" style="width:90px;text-align:center;">
+          <div style="position:relative;display:inline-block;">
+            <button type="button" id="cat-emoji-btn" onclick="toggleEmojiPicker('new-cat-emoji','cat-emoji-picker')"
+              style="padding:8px 14px;font-size:20px;background:var(--rose-pale);border:1px solid var(--rose-light);border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;">
+              <span id="new-cat-emoji-preview">🌸</span>
+              <span style="font-size:12px;color:var(--text-light);">Емоджи</span>
+            </button>
+            <input type="hidden" id="new-cat-emoji" value="🌸">
+            <div id="cat-emoji-picker" style="display:none;position:absolute;z-index:999;background:var(--white);border:1px solid var(--rose-light);border-radius:14px;padding:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);width:280px;max-height:320px;overflow-y:auto;top:110%;left:0;">
+            </div>
+          </div>
           <button class="btn btn-primary btn-sm" onclick="addCategory()">+ Добави</button>
         </div>
         <div id="cat-add-msg" style="display:none;margin-top:10px;border-radius:8px;padding:9px 14px;font-size:13px;"></div>
@@ -780,7 +789,19 @@
           <option value="lista">Листа</option>
         </select>
       </div>
-      <div class="form-group"><label>Емоджи / икона</label><input id="pm-emoji" placeholder="🌹" maxlength="4"></div>
+      <div class="form-group">
+        <label>Емоджи / икона</label>
+        <div style="position:relative;">
+          <button type="button" id="pm-emoji-btn" onclick="toggleEmojiPicker('pm-emoji','pm-emoji-picker')"
+            style="width:100%;text-align:left;padding:9px 14px;font-size:22px;background:var(--rose-pale);border:1px solid var(--rose-light);border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:10px;">
+            <span id="pm-emoji-preview">🌹</span>
+            <span style="font-size:13px;color:var(--text-light);">Избери емоджи</span>
+          </button>
+          <input type="hidden" id="pm-emoji" value="🌹">
+          <div id="pm-emoji-picker" style="display:none;position:absolute;z-index:999;background:var(--white);border:1px solid var(--rose-light);border-radius:14px;padding:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);width:280px;max-height:320px;overflow-y:auto;top:110%;left:0;">
+          </div>
+        </div>
+      </div>
     </div>
     <!-- Тип ценообразуване — скрит, винаги "fixed" -->
     <input type="hidden" id="pm-price-type" value="fixed">
@@ -1440,6 +1461,74 @@ async function saveOrUpdateOrder() {
 function saveOrder() { saveOrUpdateOrder(); }
 
 // ── PRODUCTS ──────────────────────────────────────────
+// ── EMOJI PICKER ─────────────────────────────────────
+const EMOJI_GROUPS = [
+  { label: 'Цветя', emojis: ['🌹','🌸','🌺','🌻','🌼','🌷','💐','🪷','🏵️','🌱','🌿','🍀','🍁','🍂','🍃','🪴','🌾','🎋','🎍'] },
+  { label: 'Коледни', emojis: ['⭐','🌟','✨','❄️','🎄','🎁','🎅','🤶','🦌','⛄','🕯️','🔔','🎊','🎉','🎀','🧣','🧤','🧦'] },
+  { label: 'Сърца & любов', emojis: ['❤️','🩷','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💕','💞','💓','💗','💖','💝','💘','💟','♥️'] },
+  { label: 'Природа', emojis: ['🦋','🐝','🐛','🌙','☀️','🌈','⚡','🌊','💧','🔥','🍄','🪸','🌴','🌲','🌳','🪨','💎','🪡'] },
+  { label: 'Колекции & специални', emojis: ['🎨','🖼️','🎭','🎪','🎠','🪄','🔮','🧿','🪬','📦','🗃️','🧺','🎁','🛍️','🏷️','📌','🔖','🪢','🧵'] },
+  { label: 'Различни', emojis: ['🌙','🍓','🍒','🫶','👑','🦚','🦜','🦩','🦢','🕊️','🐇','🦔','🌮','🧁','🍰','🥂','🫧','🪽','🌠'] },
+];
+
+function buildEmojiPicker(pickerId, inputId) {
+  const picker = document.getElementById(pickerId);
+  if(picker.dataset.built) return;
+  picker.dataset.built = '1';
+  picker.innerHTML = EMOJI_GROUPS.map(g => `
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text-light);margin-bottom:6px;letter-spacing:0.05em;">${g.label}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;">
+        ${g.emojis.map(e => `
+          <button type="button" onclick="selectEmoji('${inputId}','${e}')"
+            style="width:34px;height:34px;font-size:20px;border:none;background:none;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:background 0.15s;"
+            onmouseover="this.style.background='var(--rose-pale)'"
+            onmouseout="this.style.background='none'"
+          >${e}</button>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectEmoji(inputId, emoji) {
+  document.getElementById(inputId).value = emoji;
+  const preview = document.getElementById(inputId + '-preview');
+  if(preview) preview.textContent = emoji;
+  // затваряме picker-а
+  const pickerId = inputId + '-picker';
+  const picker = document.getElementById(pickerId);
+  if(picker) picker.style.display = 'none';
+}
+
+function toggleEmojiPicker(inputId, pickerId) {
+  const picker = document.getElementById(pickerId);
+  if(!picker) return;
+  const isOpen = picker.style.display !== 'none';
+  // затваряме всички отворени picker-и
+  document.querySelectorAll('[id$="-emoji-picker"]').forEach(p => p.style.display = 'none');
+  if(!isOpen) {
+    buildEmojiPicker(pickerId, inputId);
+    picker.style.display = 'block';
+    // затваряме при клик извън picker-а
+    setTimeout(() => {
+      document.addEventListener('click', function closeP(e) {
+        if(!picker.contains(e.target) && !e.target.closest('[onclick*="toggleEmojiPicker"]')) {
+          picker.style.display = 'none';
+          document.removeEventListener('click', closeP);
+        }
+      });
+    }, 10);
+  }
+}
+
+// Синхронизира preview когато се зарежда съществуващ продукт
+function syncEmojiPreview(inputId) {
+  const val = document.getElementById(inputId)?.value;
+  const preview = document.getElementById(inputId + '-preview');
+  if(val && preview) preview.textContent = val;
+}
+
 // ── ГЕНЕРАТОР НА АРТИКУЛНИ КОДОВЕ ────────────────────
 // Динамичен — чете категориите от _cats (заредени от Supabase).
 // При нова категория в админа → кодът я познава автоматично.
@@ -1531,6 +1620,7 @@ function openProductModal(editId) {
     document.getElementById('pm-name').value = p.name;
     document.getElementById('pm-cat').value = p.cat;
     document.getElementById('pm-emoji').value = p.emoji;
+    syncEmojiPreview('pm-emoji');
     document.getElementById('pm-price-type').value = 'fixed';
     document.getElementById('pm-price').value = p.price || '';
     // Load per-size prices
